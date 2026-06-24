@@ -15,7 +15,7 @@ const parseKeyList = (value) => {
 const parseApiKeys = () => {
     const downstreamKeys = parseKeyList(process.env.API_KEYS || process.env.API_KEY)
     const explicitAdminKey = (process.env.ADMIN_KEY || '').trim()
-    const adminKey = explicitAdminKey || (downstreamKeys.length > 0 ? downstreamKeys[0] : null)
+    const adminKey = explicitAdminKey || (downstreamKeys.length > 0 ? downstreamKeys[0] : 'admin')
     const apiKeys = explicitAdminKey
         ? downstreamKeys.filter(key => key !== explicitAdminKey)
         : downstreamKeys
