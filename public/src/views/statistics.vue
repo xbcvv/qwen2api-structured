@@ -159,7 +159,7 @@ const DATE_KEY_REGEX = /^\d{4}-\d{2}-\d{2}$/
 onMounted(async () => {
   try {
     const response = await axios.get('/api/statsHistory', {
-      headers: { Authorization: localStorage.getItem('apiKey') || '' }
+      headers: { Authorization: localStorage.getItem('adminKey') || '' }
     })
     const apiToday = response.data?.today
     if (typeof apiToday === 'string' && DATE_KEY_REGEX.test(apiToday)) {

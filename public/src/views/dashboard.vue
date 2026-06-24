@@ -1,69 +1,21 @@
 <template>
-  <div class="dashboard-scroll w-100vw h-100vh p-4 overflow-y-auto">
-    <div class="container mx-auto">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 px-4 space-y-4 md:space-y-0 pt-5">
-        <h1 class="text-4xl font-bold">{{ t('dash.title') }} <span class="text-gray-500 text-sm">by 兜豆子</span></h1>
-        <div class="flex flex-col md:flex-row md:items-center w-full md:w-auto gap-3">
-          <!-- 6 buttons in 2 rows on desktop (3+3), 2 columns on mobile -->
-          <div class="flex gap-2">
-          <button @click="showAddModal = true"
-                  class="action-button font-bold border border-green-200 bg-green-50 text-green-900 px-4 py-2 rounded-xl shadow-sm hover:bg-green-100 hover:border-green-400 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center">
-            {{ t('dash.addAccount') }}
-          </button>
-          <button @click="refreshAllAccounts"
-                  :disabled="isRefreshingAll"
-                  :class="[
-                    'action-button font-bold px-4 py-2 rounded-xl shadow-sm transition-all duration-300 transform active:translate-y-0',
-                    isRefreshingAll
-                      ? 'bg-purple-400 text-white border-purple-400 refreshing-button-purple cursor-not-allowed transform-none'
-                      : 'macaron-purple-button text-purple-800 hover:-translate-y-1'
-                  ]">
-            <span v-if="isRefreshingAll" class="flex items-center space-x-2">
-              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>{{ t('dash.refreshing') }}</span>
-            </span>
-            <span v-else>{{ t('dash.refreshAll') }}</span>
-          </button>
-          <button @click="forceRefreshAllAccounts"
-                  :disabled="isForceRefreshingAll"
-                  :class="[
-                    'action-button font-bold px-4 py-2 rounded-xl shadow-sm transition-all duration-300 transform active:translate-y-0',
-                    isForceRefreshingAll
-                      ? 'bg-pink-400 text-white border-pink-400 refreshing-button-pink cursor-not-allowed transform-none'
-                      : 'macaron-pink-button text-pink-800 hover:-translate-y-1'
-                  ]">
-            <span v-if="isForceRefreshingAll" class="flex items-center space-x-2">
-              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>{{ t('dash.forceRefreshing') }}</span>
-            </span>
-            <span v-else>{{ t('dash.forceRefresh') }}</span>
-          </button>
-          <button @click="exportAccounts"
-                  class="action-button font-bold border border-yellow-200 bg-yellow-50 text-yellow-900 px-4 py-2 rounded-xl shadow-sm hover:bg-yellow-100 hover:border-yellow-400 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center">
-            {{ t('dash.export') }}
-          </button>
-          <router-link to="/statistics"
-                       class="action-button font-bold border border-indigo-200 bg-indigo-50 text-indigo-900 px-4 py-2 rounded-xl shadow-sm hover:bg-indigo-100 hover:border-indigo-400 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center">
-            {{ t('dash.statistics') }}
-          </router-link>
-          <router-link to="/settings"
-                       class="action-button font-bold border border-blue-200 bg-blue-50 text-blue-900 px-4 py-2 rounded-xl shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center">
-            {{ t('dash.settings') }}
-          </router-link>
-          <router-link to="/chat"
-                       class="action-button font-bold border border-blue-200 bg-blue-50 text-blue-900 px-4 py-2 rounded-xl shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center">
-            {{ t('dash.chat') }}
-          </router-link>
-          </div>
-          <LangSwitcher class="self-center md:self-auto" />
-        </div>
+  <div>
+    <div class="list-page-head">
+      <div>
+        <h1 style="font-size:1.2rem;font-weight:800;">{{ t('dash.title') }}</h1>
+        <p style="font-size:.82rem;color:var(--fg-muted);margin-top:4px;">管理 Qwen 账号、代理、刷新与调用统计</p>
       </div>
+      <div class="list-page-actions">
+        <button @click="showAddModal = true" class="primary">{{ t('dash.addAccount') }}</button>
+        <button @click="refreshAllAccounts" :disabled="isRefreshingAll" class="smallbtn">
+          {{ isRefreshingAll ? t('dash.refreshing') : t('dash.refreshAll') }}
+        </button>
+        <button @click="forceRefreshAllAccounts" :disabled="isForceRefreshingAll" class="smallbtn">
+          {{ isForceRefreshingAll ? t('dash.forceRefreshing') : t('dash.forceRefresh') }}
+        </button>
+        <button @click="exportAccounts" class="smallbtn">{{ t('dash.export') }}</button>
+      </div>
+    </div>
 
       <!-- 分页控制区 -->
       <div class="flex justify-between items-center px-4 mb-4">
@@ -551,14 +503,12 @@
         <span class="whitespace-pre-line">{{ toast.message }}</span>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
-import LangSwitcher from '../components/LangSwitcher.vue'
 import { formatCompact as _formatCompact } from '../utils/format.js'
 
 const { t } = useI18n()
@@ -785,7 +735,7 @@ const batchTaskProgressStyle = computed(() => ({
 }))
 
 const getAuthHeaders = () => ({
-  'Authorization': localStorage.getItem('apiKey') || ''
+  'Authorization': localStorage.getItem('adminKey') || ''
 })
 
 const clearBatchTaskPolling = () => {
