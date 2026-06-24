@@ -18,18 +18,28 @@
                     <div class="relative flex flex-col gap-4">
                         <label class="text-gray-700 font-semibold text-lg">{{ t('settings.apiKeyTitle') }}</label>
 
-                        <!-- 管理员密钥状态 -->
+                        <!-- 管理员密钥修改 -->
                         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="text-yellow-600 font-semibold">{{ t('settings.adminKey') }}</span>
+                                <span class="text-yellow-600 font-semibold">{{ t('settings.adminKeyTitle') }}</span>
                                 <span v-if="settings.adminKeySet" class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">{{ t('settings.adminKeySet') }}</span>
                                 <span v-else class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">{{ t('settings.adminKeyUnset') }}</span>
                             </div>
-                            <div v-if="settings.adminKeyHint" class="text-sm text-gray-600">🔑 {{ settings.adminKeyHint }}</div>
-                            <div v-else class="text-sm text-red-500">{{ t('settings.adminKeyMissing') }}</div>
+                            <div v-if="settings.adminKeyHint" class="text-sm text-gray-600 mb-2">🔑 {{ settings.adminKeyHint }}</div>
+                            <div v-else class="text-sm text-red-500 mb-2">{{ t('settings.adminKeyMissing') }}</div>
+                            <div class="text-xs text-gray-500 mb-2">{{ t('settings.adminKeyHint') }}</div>
+                            <div class="flex gap-2">
+                                <input v-model="newAdminKey" type="password"
+                                    :placeholder="t('settings.adminKeyInput')"
+                                    class="flex-1 rounded-lg border-gray-300 bg-white shadow-sm h-8 text-sm px-3">
+                                <button @click="saveAdminKey"
+                                    class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-yellow-600 transition-all">
+                                    {{ t('settings.adminKeySave') }}
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- 普通密钥列表 -->
+                        <!-- 下游密钥列表 -->
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="text-gray-700 font-semibold">{{ t('settings.regularKeys') }}</span>
@@ -204,6 +214,7 @@ const settings = ref({
 
 const showAddKeyModal = ref(false)
 const newApiKey = ref('')
+const newAdminKey = ref('')
 
 const loadSettings = async () => {
     try {
@@ -310,6 +321,25 @@ const saveRetryConfig = async () => {
 }
 
 // API Key 管理相关函数
+const saveAdminKey = async () => {
+    if (!newAdminKey.value.trim()) {
+        alert(t('smsg.adminKeyRequired'))
+        return
+    }
+    try {
+        await axios.post('/api/setAdminKey', { adminKey: newAdminKey.value.trim() }, {
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
+        })
+        // Update local storage with new key
+        localStorage.setItem('adminKey', newAdminKey.value.trim())
+        newAdminKey.value = ''
+        await loadSettings()
+        alert(t('smsg.adminKeySaved'))
+    } catch (error) {
+        alert(t('smsg.adminKeyFailed') + (error.response?.data?.error || error.message))
+    }
+}
+
 const addRegularKey = async () => {
     if (!newApiKey.value.trim()) {
         alert(t('smsg.enterKey'))

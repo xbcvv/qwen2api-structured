@@ -127,9 +127,9 @@
     "apiKeyTitle": "🔑 Управление API-ключами",
     "adminKey": "👑 Ключ администратора",
     "adminReadonly": "Только чтение",
-    "regularKeys": "🔐 Обычные ключи",
+    "regularKeys": "🔐 Ключи вызовов",
     "addKey": "+ Добавить ключ",
-    "noKeys": "Нет обычных ключей",
+    "noKeys": "Ключи вызовов не настроены",
     "delete": "Удалить",
     "autoRefresh": "🔄 Автообновление",
     "enableAutoRefresh": "Включить автообновление",
@@ -155,7 +155,11 @@
     "add": "Добавить",
     "adminKeySet": "Настроен",
     "adminKeyUnset": "Не настроен",
-    "adminKeyMissing": "⚠️ Установите ADMIN_KEY в переменных окружения"
+    "adminKeyMissing": "⚠️ Установите ADMIN_KEY в переменных окружения",
+    "adminKeyTitle": "🔑 Ключ администратора",
+    "adminKeyHint": "Используется для входа в панель. Войдите заново после изменения.",
+    "adminKeyInput": "Введите новый ключ администратора",
+    "adminKeySave": "Сохранить ключ администратора"
   },
   "smsg": {
     "apiKeySaved": "API-ключ сохранён",
@@ -177,7 +181,10 @@
     "keyAddFailed": "Ошибка добавления ключа: ",
     "confirmDeleteKey": "Удалить этот API-ключ?",
     "keyDeleted": "Ключ удалён",
-    "keyDeleteFailed": "Ошибка удаления ключа: "
+    "keyDeleteFailed": "Ошибка удаления ключа: ",
+    "adminKeySaved": "Ключ администратора обновлён. Войдите заново новым ключом.",
+    "adminKeyFailed": "Ошибка обновления ключа: ",
+    "adminKeyRequired": "Введите новый ключ администратора"
   },
   "lang": {
     "label": "🌐 Язык / Language",

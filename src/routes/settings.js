@@ -225,4 +225,29 @@ router.post('/simple-model-map', adminKeyVerify, async (req, res) => {
   }
 })
 
+router.post('/setAdminKey', adminKeyVerify, async (req, res) => {
+  try {
+    const { adminKey } = req.body
+    if (!adminKey || !String(adminKey).trim()) {
+      return res.status(400).json({ error: '新的管理员密钥不能为空' })
+    }
+    const nextAdminKey = String(adminKey).trim()
+
+    config.adminKey = nextAdminKey
+
+    // Ensure downstream keys do not contain the new admin key.
+    config.apiKeys = config.apiKeys.filter(key => key && key !== nextAdminKey)
+
+    const persisted = await dataPersistence.saveSettings({
+      adminKey: config.adminKey,
+      apiKeys: config.apiKeys
+    })
+
+    res.json({ message: '管理员密钥更新成功', persisted })
+  } catch (error) {
+    logger.error('更新管理员密钥失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 module.exports = router

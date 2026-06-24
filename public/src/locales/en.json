@@ -143,9 +143,9 @@
     "delete": "delete",
     "enableAutoRefresh": "Enable automatic refresh",
     "enableThinkOutput": "Enable thought output",
-    "noKeys": "No common key yet",
+    "noKeys": "No downstream keys configured",
     "refreshInterval": "Refresh interval (seconds)",
-    "regularKeys": "🔐 Normal key",
+    "regularKeys": "🔐 Downstream Keys",
     "retryBackoffLabel": "Number of milliseconds between retries (0-60000)",
     "retryCountLabel": "Number of retries (0-10)",
     "retryHint": "After the network error retries are exhausted, the account will be recorded as a failure and enter a 5-minute cooldown three times in a row. \nReceived HTTP response (containing 5xx) without retrying.",
@@ -160,7 +160,11 @@
     "title": "System settings",
     "adminKeySet": "Configured",
     "adminKeyUnset": "Not configured",
-    "adminKeyMissing": "⚠️ Please set ADMIN_KEY in environment variables"
+    "adminKeyMissing": "⚠️ Please set ADMIN_KEY in environment variables",
+    "adminKeyTitle": "🔑 Admin Key",
+    "adminKeyHint": "Used for web admin login. Re-login required after change.",
+    "adminKeyInput": "Enter new admin key",
+    "adminKeySave": "Save Admin Key"
   },
   "smsg": {
     "apiKeyFailed": "API Key saving failed:",
@@ -182,7 +186,10 @@
     "simpleMapFailed": "Simplified model mapping settings failed to save:",
     "simpleMapSaved": "Simplified model mapping settings saved successfully",
     "thinkFailed": "Thinking output settings failed to save:",
-    "thinkSaved": "Think output settings saved successfully"
+    "thinkSaved": "Think output settings saved successfully",
+    "adminKeySaved": "Admin key updated. Please re-login with the new key.",
+    "adminKeyFailed": "Admin key update failed: ",
+    "adminKeyRequired": "Please enter a new admin key"
   },
   "stats": {
     "account": {

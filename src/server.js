@@ -80,9 +80,14 @@ const applyPersistedSettings = async () => {
       const v = parseInt(persisted.chatRetryBackoffMs, 10)
       if (!isNaN(v) && v >= 0) config.chatRetryBackoffMs = v
     }
-    // Only restore persisted downstream API keys; never touch adminKey from persistence
+    // Restore persisted adminKey first so web UI changes survive restart.
+    // This intentionally overrides env ADMIN_KEY when settings.adminKey exists.
+    if (typeof persisted.adminKey === 'string' && persisted.adminKey.trim()) {
+      config.adminKey = persisted.adminKey.trim()
+    }
+    // Only restore persisted downstream API keys; never infer adminKey from apiKeys here.
     if (persisted.apiKeys?.length > 0) {
-      config.apiKeys = persisted.apiKeys.filter(key => key !== config.adminKey)
+      config.apiKeys = persisted.apiKeys.filter(key => key && key !== config.adminKey)
     }
   } catch (err) {
     logger.warn('加载持久化设置失败, 使用 env/默认值', 'CONFIG', '', err.message)

@@ -127,9 +127,9 @@
     "apiKeyTitle": "🔑 API Key 管理",
     "adminKey": "👑 管理员密钥",
     "adminReadonly": "不可修改",
-    "regularKeys": "🔐 普通密钥",
+    "regularKeys": "🔐 下游密钥",
     "addKey": "+ 添加密钥",
-    "noKeys": "暂无普通密钥",
+    "noKeys": "暂无下游密钥",
     "delete": "删除",
     "autoRefresh": "🔄 自动刷新",
     "enableAutoRefresh": "启用自动刷新",
@@ -155,7 +155,11 @@
     "add": "添加",
     "adminKeySet": "已配置",
     "adminKeyUnset": "未配置",
-    "adminKeyMissing": "⚠️ 请在环境变量 ADMIN_KEY 中设置管理员密钥"
+    "adminKeyMissing": "⚠️ 请在环境变量 ADMIN_KEY 中设置管理员密钥",
+    "adminKeyTitle": "🔑 管理员密钥",
+    "adminKeyHint": "用于 Web 后台登录，修改后需重新登录",
+    "adminKeyInput": "输入新的管理员密钥",
+    "adminKeySave": "保存管理员密钥"
   },
   "smsg": {
     "apiKeySaved": "API Key保存成功",
@@ -177,7 +181,10 @@
     "keyAddFailed": "API Key添加失败: ",
     "confirmDeleteKey": "确定要删除此API Key吗？",
     "keyDeleted": "API Key删除成功",
-    "keyDeleteFailed": "API Key删除失败: "
+    "keyDeleteFailed": "API Key删除失败: ",
+    "adminKeySaved": "管理员密钥已更新，使用新密钥重新登录",
+    "adminKeyFailed": "管理员密钥更新失败：",
+    "adminKeyRequired": "请输入新的管理员密钥"
   },
   "lang": {
     "label": "🌐 语言 / Language",
