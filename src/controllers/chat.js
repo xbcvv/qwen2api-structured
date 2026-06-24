@@ -86,6 +86,9 @@ const createPhaseAccumulator = () => ({
     answer: '',
     unknown: '',
     raw: '',
+    rawEvents: [],
+    rawTail: '',
+    parseErrors: [],
     webSearchInfo: null,
     imageMarkdownSet: new Set(),
     imageMarkdownList: []
@@ -98,6 +101,57 @@ const appendImageMarkdown = (accumulator, imageMarkdownList) => {
             accumulator.imageMarkdownList.push(item)
         }
     }
+}
+
+const redactSensitive = (value) => {
+    if (!value) return ''
+    return String(value)
+        .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '***JWT_REDACTED***')
+        .replace(/(authorization|api[_-]?key|token|secret|password)("?\s*[:=]\s*"?)[^,"\s}]+/ig, '$1$2***REDACTED***')
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig, '***EMAIL_REDACTED***')
+}
+
+const pushRawEvent = (accumulator, dataContent) => {
+    const redacted = redactSensitive(dataContent)
+    accumulator.rawTail = redacted.slice(-1200)
+    if (accumulator.rawEvents.length < 5) {
+        accumulator.rawEvents.push(redacted.slice(0, 1200))
+    }
+}
+
+const buildUpstreamErrorMessage = (accumulator, totalTokens = {}) => {
+    const thinkLen = accumulator.think?.length || 0
+    const answerLen = accumulator.answer?.length || 0
+    const unknownLen = accumulator.unknown?.length || 0
+    const rawEventCount = accumulator.rawEvents?.length || 0
+    const promptTokens = totalTokens.prompt_tokens || 0
+    const completionTokens = totalTokens.completion_tokens || 0
+
+    let reason = '上游未返回可用正文。'
+    if (rawEventCount === 0 && !accumulator.rawTail) {
+        reason = '上游 SSE 连接结束，但没有返回任何 data 事件。'
+    } else if (thinkLen === 0 && answerLen === 0 && unknownLen === 0) {
+        reason = '上游返回了 SSE data，但没有可解析的 delta.content。'
+    } else if (answerLen === 0 && thinkLen > 0) {
+        reason = '上游只返回了 think 内容，没有返回 answer 内容。'
+    }
+
+    const details = [
+        `reason=${reason}`,
+        `phase_lengths={think:${thinkLen},answer:${answerLen},unknown:${unknownLen}}`,
+        `usage={prompt_tokens:${promptTokens},completion_tokens:${completionTokens}}`,
+    ]
+
+    if (accumulator.parseErrors?.length) {
+        details.push(`parse_errors=${accumulator.parseErrors.slice(-3).join(' | ')}`)
+    }
+    if (accumulator.rawTail) {
+        details.push(`raw_tail=${accumulator.rawTail}`)
+    } else if (rawEventCount > 0) {
+        details.push(`raw_first=${accumulator.rawEvents[0]}`)
+    }
+
+    return `上游错误：${details.join('; ')}`
 }
 const appendDeltaToAccumulator = (accumulator, delta) => {
     if (delta && delta.name === 'web_search') {
@@ -169,8 +223,16 @@ const consumeUpstreamToAccumulator = (upstreamResponse, accumulator, totalTokens
         for (const item of chunks) {
             try {
                 const dataContent = item.replace("data: ", '')
+                pushRawEvent(accumulator, dataContent)
                 const decodeJson = isJson(dataContent) ? JSON.parse(dataContent) : null
-                if (decodeJson === null || !decodeJson.choices || decodeJson.choices.length === 0) {
+                if (decodeJson === null) {
+                    accumulator.parseErrors.push(`non_json:${redactSensitive(dataContent).slice(0, 200)}`)
+                    continue
+                }
+                if (decodeJson.error) {
+                    accumulator.parseErrors.push(`upstream_error:${redactSensitive(JSON.stringify(decodeJson.error)).slice(0, 300)}`)
+                }
+                if (!decodeJson.choices || decodeJson.choices.length === 0) {
                     continue
                 }
 
@@ -265,8 +327,8 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
         }
 
         if (!finalContent && toolCalls.length === 0) {
-            finalContent = config.fallbackContent || '抱歉，上游返回了空响应，请稍后重试。'
-            logger.warning?.('流式响应内容为空，使用 fallback 内容', 'CHAT')
+            finalContent = buildUpstreamErrorMessage(accumulator, totalTokensRef.value)
+            logger.warning?.(`流式响应内容为空，返回上游错误详情: ${finalContent}`, 'CHAT')
         }
 
         if (finalContent) {
@@ -376,10 +438,10 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
         totalTokens.completion_tokens = Math.max(0, totalTokens.completion_tokens || 0)
         totalTokens.total_tokens = totalTokens.prompt_tokens + totalTokens.completion_tokens
 
-        // Fallback for empty response
+        // Fallback for empty response: return upstream details, not a generic local message
         if (!assistantContent && toolCalls.length === 0) {
-            assistantContent = config.fallbackContent || '抱歉，上游返回了空响应，请稍后重试。'
-            logger.warning?.('非流式响应内容为空，使用 fallback 内容', 'CHAT')
+            assistantContent = buildUpstreamErrorMessage(accumulator, totalTokens)
+            logger.warning?.(`非流式响应内容为空，返回上游错误详情: ${assistantContent}`, 'CHAT')
         }
 
         attributeChatUsage(options.currentAccount, totalTokens)
