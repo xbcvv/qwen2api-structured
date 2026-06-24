@@ -12,6 +12,71 @@
 
 </div>
 
+
+## 🔒 结构化输出分离版说明
+
+本仓库是基于 `Rfym21/Qwen2API` 的结构化重构版本，重点修复 OpenAI 兼容接口中 **thinking / answer 混杂** 的问题。
+
+### 本分支核心改动
+
+- 新增 `src/utils/answer-extractor.js`：统一清洗 `<think>...</think>` 残留块与常见 reasoning 前缀。
+- 重构 `src/controllers/chat.js`：OpenAI `stream` / `non-stream` 路径统一走 phase accumulator。
+- 上游 SSE delta 先进入独立 buffer：
+  - `think`：思考过程
+  - `answer`：最终回答
+  - `unknown`：兼容未知阶段
+  - `raw`：仅用于 token 估算与排障
+- 当 `OUTPUT_THINK=false` 时，对外只返回 answer，不输出 think。
+- 保留 OpenAI `tools` / `tool_choice=required` 能力，已验证 stream 与 non-stream tool_calls。
+- 为防止思考内容在流式模式提前泄漏，OpenAI stream 路径采用“上游完整读取 → 结构化清洗 → SSE 输出最终结果”的策略。
+
+### 默认安全配置
+
+示例配置默认：
+
+```bash
+API_KEY=qwen2api
+OUTPUT_THINK=false
+```
+
+公开部署时请务必自行修改 `API_KEY`，不要使用默认值暴露到公网。
+
+### 隐私保护
+
+本仓库不包含任何真实账号、token、cookie、密码、生产 `.env` 或 `data/data.json`。
+
+以下文件/目录默认不会提交：
+
+- `.env`
+- `data/data.json`
+- `data/accounts.json`
+- `logs/`
+- `caches/`
+
+### 参考项目与技术来源
+
+本版本调研并参考了以下 2026 年 6 月后仍活跃或有代表性的项目/方向：
+
+| 项目 | 地址 | 参考点 |
+|---|---|---|
+| Rfym21/Qwen2API | https://github.com/Rfym21/Qwen2API | 本仓库基础；OpenAI/Anthropic 兼容、账号轮询、tools 支持 |
+| YuJunZhiXue/qwen2API | https://github.com/YuJunZhiXue/qwen2API | Go runtime、WAF/keepalive、WebUI 与部署形态 |
+| 123hi123/qwen2api-rs | https://github.com/123hi123/qwen2api-rs | Rust 网关化重写、OpenAI/Anthropic/Gemini 兼容方向 |
+| encryptarun/qwen-api | https://github.com/encryptarun/qwen-api | Qwen Web API proxy、OpenAI-compatible endpoints |
+| Tiaeventful732/QwenChat2Api | https://github.com/Tiaeventful732/QwenChat2Api | Qwen web chat 到 OpenAI-compatible API 的实现方向 |
+
+### 快速 Docker 构建
+
+```bash
+git clone <this-repo-url>
+cd <repo>
+cp .env.example .env
+# 修改 .env 里的 API_KEY / ACCOUNTS / DATA_SAVE_MODE
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+---
+
 ## 🛠️ 快速开始
 
 ### 项目说明
@@ -88,7 +153,7 @@ LISTEN_ADDRESS=localhost       # 监听地址
 SERVICE_PORT=3000             # 服务端口
 
 # 🔐 安全配置
-API_KEY=sk-123456,sk-456789   # API 密钥 (必填，支持多密钥)
+API_KEY=qwen2api   # API 密钥 (必填，支持多密钥)
 ACCOUNTS=                     # 账户配置 (格式: user1:pass1[|proxy_url],user2:pass2[|proxy_url])
 
 # 🚀 PM2 多进程配置
@@ -98,7 +163,7 @@ PM2_MAX_MEMORY=1G             # PM2内存限制 (100M/1G/2G等)
 
 # 🔍 功能配置
 SEARCH_INFO_MODE=table        # 搜索信息展示模式 (table/text)
-OUTPUT_THINK=true             # 是否输出思考过程 (true/false)
+OUTPUT_THINK=false             # 是否输出思考过程 (true/false)
 SIMPLE_MODEL_MAP=false        # 简化模型映射 (true/false)
 
 # 🌐 代理与反代配置
@@ -121,7 +186,7 @@ CACHE_MODE=default            # 图片缓存模式 (default/file)
 |------|------|------|
 | `LISTEN_ADDRESS` | 服务监听地址 | `localhost` 或 `0.0.0.0` |
 | `SERVICE_PORT` | 服务运行端口 | `3000` |
-| `API_KEY` | API 访问密钥，支持多密钥配置。第一个为管理员密钥（可访问前端管理页面），其他为普通密钥（仅可调用API）。多个密钥用逗号分隔 | `sk-admin123,sk-user456,sk-user789` |
+| `API_KEY` | API 访问密钥，支持多密钥配置。第一个为管理员密钥（可访问前端管理页面），其他为普通密钥（仅可调用API）。多个密钥用逗号分隔 | `qwen2api,user-key-1,user-key-2` |
 | `PM2_INSTANCES` | PM2进程数量 | `1`/`4`/`max` |
 | `PM2_MAX_MEMORY` | PM2内存限制 | `100M`/`1G`/`2G` |
 | `SEARCH_INFO_MODE` | 搜索结果展示格式 | `table` 或 `text` |
@@ -152,10 +217,10 @@ CACHE_MODE=default            # 图片缓存模式 (default/file)
 **配置格式:**
 ```bash
 # 单个密钥（管理员权限）
-API_KEY=sk-admin123
+API_KEY=qwen2api
 
 # 多个密钥（第一个为管理员，其他为普通用户）
-API_KEY=sk-admin123,sk-user456,sk-user789
+API_KEY=qwen2api,user-key-1,user-key-2
 ```
 
 **权限说明:**
@@ -208,7 +273,7 @@ caches/
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -e API_KEY=sk-admin123,sk-user456,sk-user789 \
+  -e API_KEY=qwen2api,user-key-1,user-key-2 \
   -e DATA_SAVE_MODE=none \
   -e CACHE_MODE=file \
   -e ACCOUNTS= \
@@ -395,10 +460,10 @@ Authorization: Bearer sk-your-api-key
 **认证示例:**
 ```bash
 # 使用管理员密钥
-curl -H "Authorization: Bearer sk-admin123" http://localhost:3000/v1/models
+curl -H "Authorization: Bearer qwen2api" http://localhost:3000/v1/models
 
 # 使用普通密钥
-curl -H "Authorization: Bearer sk-user456" http://localhost:3000/v1/chat/completions
+curl -H "Authorization: Bearer user-key-1" http://localhost:3000/v1/chat/completions
 ```
 
 ### 🔍 获取模型列表

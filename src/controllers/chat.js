@@ -6,6 +6,7 @@ const accountManager = require('../utils/account.js')
 const config = require('../config/index.js')
 const axios = require('axios')
 const { logger } = require('../utils/logger')
+const { cleanAnswerContent } = require('../utils/answer-extractor.js')
 
 /**
  * 设置响应头
@@ -97,251 +98,151 @@ const attributeChatUsage = (account, usage) => {
     }
 }
 
+const createPhaseAccumulator = () => ({
+    think: '',
+    answer: '',
+    unknown: '',
+    raw: '',
+    webSearchInfo: null,
+    imageMarkdownSet: new Set(),
+    imageMarkdownList: []
+})
+
+const appendImageMarkdown = (accumulator, imageMarkdownList) => {
+    if (!imageMarkdownList || imageMarkdownList.length === 0) return
+    for (const item of imageMarkdownList) {
+        if (!accumulator.imageMarkdownSet.has(item)) {
+            accumulator.imageMarkdownSet.add(item)
+            accumulator.imageMarkdownList.push(item)
+        }
+    }
+}
+
+const appendDeltaToAccumulator = (accumulator, delta) => {
+    if (delta && delta.name === 'web_search') {
+        accumulator.webSearchInfo = delta.extra?.web_search_info || accumulator.webSearchInfo
+    }
+
+    appendImageMarkdown(accumulator, getImageMarkdownListFromDelta(delta))
+
+    if (!delta || !delta.content) return
+    const content = delta.content
+    accumulator.raw += content
+    if (delta.phase === 'think') {
+        accumulator.think += content
+    } else if (delta.phase === 'answer') {
+        accumulator.answer += content
+    } else {
+        accumulator.unknown += content
+    }
+}
+
+const buildOpenAIContentFromAccumulator = async (accumulator, enable_thinking) => {
+    let answerContent = cleanAnswerContent(accumulator.answer || accumulator.unknown || '', config.outThink)
+
+    if (accumulator.imageMarkdownList.length > 0) {
+        const imageContent = accumulator.imageMarkdownList.join('\n\n')
+        answerContent = answerContent ? `${imageContent}\n\n${answerContent}` : imageContent
+    }
+
+    if ((config.outThink === false || !enable_thinking) && accumulator.webSearchInfo && config.searchInfoMode === "text") {
+        const webSearchTable = await accountManager.generateMarkdownTable(accumulator.webSearchInfo, "text")
+        answerContent = answerContent ? `${answerContent}\n\n---\n${webSearchTable}` : webSearchTable
+    }
+
+    if (config.outThink !== false && enable_thinking && accumulator.think && accumulator.think.trim()) {
+        let thinkContent = accumulator.think.trim()
+        if (accumulator.webSearchInfo) {
+            const webSearchTable = await accountManager.generateMarkdownTable(accumulator.webSearchInfo, config.searchInfoMode)
+            thinkContent = `${webSearchTable}\n\n${thinkContent}`
+        }
+        return `<think>\n\n${thinkContent}\n\n</think>\n${answerContent || ''}`
+    }
+
+    return answerContent
+}
+
+const consumeUpstreamToAccumulator = (upstreamResponse, accumulator, totalTokensRef) => new Promise((resolve, reject) => {
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+
+    upstreamResponse.on('data', (chunk) => {
+        const decodeText = decoder.decode(chunk, { stream: true })
+        buffer += decodeText
+
+        const chunks = []
+        let startIndex = 0
+
+        while (true) {
+            const dataStart = buffer.indexOf('data: ', startIndex)
+            if (dataStart === -1) break
+            const dataEnd = buffer.indexOf('\n\n', dataStart)
+            if (dataEnd === -1) break
+            const dataChunk = buffer.substring(dataStart, dataEnd).trim()
+            chunks.push(dataChunk)
+            startIndex = dataEnd + 2
+        }
+
+        if (startIndex > 0) {
+            buffer = buffer.substring(startIndex)
+        }
+
+        for (const item of chunks) {
+            try {
+                const dataContent = item.replace("data: ", '')
+                const decodeJson = isJson(dataContent) ? JSON.parse(dataContent) : null
+                if (decodeJson === null || !decodeJson.choices || decodeJson.choices.length === 0) {
+                    continue
+                }
+
+                if (decodeJson.usage) {
+                    totalTokensRef.value = {
+                        prompt_tokens: decodeJson.usage.prompt_tokens || totalTokensRef.value.prompt_tokens,
+                        completion_tokens: decodeJson.usage.completion_tokens || totalTokensRef.value.completion_tokens,
+                        total_tokens: decodeJson.usage.total_tokens || totalTokensRef.value.total_tokens
+                    }
+                }
+
+                appendDeltaToAccumulator(accumulator, decodeJson.choices[0].delta)
+            } catch (error) {
+                logger.error('SSE 数据结构化解析错误', 'CHAT', '', error)
+            }
+        }
+    })
+
+    upstreamResponse.on('end', () => resolve())
+    upstreamResponse.on('error', (err) => reject(err))
+})
+
+const getPromptText = (requestBody) => {
+    if (!requestBody || !Array.isArray(requestBody.messages)) return ''
+    return requestBody.messages.map(msg => {
+        if (typeof msg.content === 'string') return msg.content
+        if (Array.isArray(msg.content)) return msg.content.map(item => item.text || '').join('')
+        return ''
+    }).join('\n')
+}
+
 const handleStreamResponse = async (res, response, enable_thinking, enable_web_search, requestBody = null, options = {}) => {
     try {
         const message_id = generateUUID()
-        let web_search_info = null
-        let thinking_start = false
-        let thinking_end = false
-        let emittedImageMarkdownSet = new Set()
-        let pendingImageMarkdownList = []
-
         const hasTools = !!options.has_tools
         const toolChoice = options.tool_choice
-        const toolParser = hasTools ? createToolCallStreamParser() : null
+        const accumulator = createPhaseAccumulator()
+        const totalTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
+        const promptText = getPromptText(requestBody)
 
-        // Token消耗量统计
-        let totalTokens = {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0
-        }
-        let completionContent = '' // 收集完整的回复内容用于token估算
+        await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef)
 
-        // 提取prompt文本用于token估算
-        let promptText = ''
-        if (requestBody && requestBody.messages) {
-            promptText = requestBody.messages.map(msg => {
-                if (typeof msg.content === 'string') {
-                    return msg.content
-                } else if (Array.isArray(msg.content)) {
-                    return msg.content.map(item => item.text || '').join('')
-                }
-                return ''
-            }).join('\n')
+        let finalContent = await buildOpenAIContentFromAccumulator(accumulator, enable_thinking)
+        let toolCalls = []
+        if (hasTools) {
+            const parsed = parseToolCallsFromText(finalContent || '')
+            finalContent = parsed.cleanedText
+            toolCalls = parsed.toolCalls
         }
 
-        /**
-         * 写一个标准 OpenAI 文本增量
-         * @param {string} text - 文本内容
-         */
-        const writeContentDelta = (text) => {
-            if (!text) return
-            res.write(`data: ${JSON.stringify({
-                "id": `chatcmpl-${message_id}`,
-                "object": "chat.completion.chunk",
-                "created": Math.round(new Date().getTime() / 1000),
-                "choices": [
-                    {
-                        "index": 0,
-                        "delta": { "content": text },
-                        "finish_reason": null
-                    }
-                ]
-            })}\n\n`)
-        }
-
-        /**
-         * 写一个工具调用增量，按 OpenAI 规范分片：
-         *   1) 头块：包含 index/id/type 与 function.name + 空 arguments
-         *   2) 多个参数块：function.arguments 切片
-         * @param {Array<Object>} calls - 已完成的工具调用列表
-         */
-        const writeToolCallsDelta = (calls) => {
-            if (!calls || calls.length === 0) return
-            const ARG_CHUNK_SIZE = 32
-
-            for (const call of calls) {
-                const headerDelta = {
-                    "id": `chatcmpl-${message_id}`,
-                    "object": "chat.completion.chunk",
-                    "created": Math.round(new Date().getTime() / 1000),
-                    "choices": [
-                        {
-                            "index": 0,
-                            "delta": {
-                                "tool_calls": [
-                                    {
-                                        "index": call.index,
-                                        "id": call.id,
-                                        "type": "function",
-                                        "function": {
-                                            "name": call.function.name,
-                                            "arguments": ""
-                                        }
-                                    }
-                                ]
-                            },
-                            "finish_reason": null
-                        }
-                    ]
-                }
-                res.write(`data: ${JSON.stringify(headerDelta)}\n\n`)
-
-                const argsString = call.function.arguments || ''
-                for (let offset = 0; offset < argsString.length; offset += ARG_CHUNK_SIZE) {
-                    const piece = argsString.slice(offset, offset + ARG_CHUNK_SIZE)
-                    const argDelta = {
-                        "id": `chatcmpl-${message_id}`,
-                        "object": "chat.completion.chunk",
-                        "created": Math.round(new Date().getTime() / 1000),
-                        "choices": [
-                            {
-                                "index": 0,
-                                "delta": {
-                                    "tool_calls": [
-                                        {
-                                            "index": call.index,
-                                            "function": { "arguments": piece }
-                                        }
-                                    ]
-                                },
-                                "finish_reason": null
-                            }
-                        ]
-                    }
-                    res.write(`data: ${JSON.stringify(argDelta)}\n\n`)
-                }
-            }
-        }
-
-        /**
-         * 处理一个 SSE data 段（已剥离 'data: ' 前缀）
-         * @param {string} dataContent - 原始 data 段
-         */
-        const processSSEPayload = async (dataContent) => {
-            const decodeJson = isJson(dataContent) ? JSON.parse(dataContent) : null
-            if (decodeJson === null || !decodeJson.choices || decodeJson.choices.length === 0) {
-                return
-            }
-
-            if (decodeJson.usage) {
-                totalTokens = {
-                    prompt_tokens: decodeJson.usage.prompt_tokens || totalTokens.prompt_tokens,
-                    completion_tokens: decodeJson.usage.completion_tokens || totalTokens.completion_tokens,
-                    total_tokens: decodeJson.usage.total_tokens || totalTokens.total_tokens
-                }
-            }
-
-            const delta = decodeJson.choices[0].delta
-
-            if (delta && delta.name === 'web_search') {
-                web_search_info = delta.extra.web_search_info
-            }
-
-            const imageMarkdownList = getImageMarkdownListFromDelta(delta)
-            if (imageMarkdownList.length > 0) {
-                const newImageMarkdownList = imageMarkdownList.filter(item => !emittedImageMarkdownSet.has(item))
-
-                if (thinking_start && !thinking_end) {
-                    for (const imageMarkdown of newImageMarkdownList) {
-                        if (!pendingImageMarkdownList.includes(imageMarkdown)) {
-                            pendingImageMarkdownList.push(imageMarkdown)
-                        }
-                    }
-                } else if (newImageMarkdownList.length > 0) {
-                    const imageContent = `${newImageMarkdownList.join('\n\n')}\n\n`
-                    completionContent += imageContent
-                    newImageMarkdownList.forEach(item => emittedImageMarkdownSet.add(item))
-                    writeContentDelta(imageContent)
-                }
-            }
-
-            if (!delta || !delta.content ||
-                (delta.phase !== 'think' && delta.phase !== 'answer')) {
-                return
-            }
-
-            let content = delta.content
-            completionContent += content
-
-            if (delta.phase === 'think' && !thinking_start) {
-                thinking_start = true
-                if (web_search_info) {
-                    content = `<think>\n\n${await accountManager.generateMarkdownTable(web_search_info, config.searchInfoMode)}\n\n${content}`
-                } else {
-                    content = `<think>\n\n${content}`
-                }
-            }
-            if (delta.phase === 'answer' && !thinking_end && thinking_start) {
-                thinking_end = true
-                if (pendingImageMarkdownList.length > 0) {
-                    const pendingImageContent = `${pendingImageMarkdownList.join('\n\n')}\n\n`
-                    content = `\n\n</think>\n${pendingImageContent}${content}`
-                    completionContent += pendingImageContent
-                    pendingImageMarkdownList.forEach(item => emittedImageMarkdownSet.add(item))
-                    pendingImageMarkdownList = []
-                } else {
-                    content = `\n\n</think>\n${content}`
-                }
-            }
-
-            if (toolParser && delta.phase === 'answer') {
-                const parsed = toolParser.push(content)
-                if (parsed.textDelta) writeContentDelta(parsed.textDelta)
-                if (parsed.completedCalls.length > 0) writeToolCallsDelta(parsed.completedCalls)
-            } else {
-                writeContentDelta(content)
-            }
-        }
-
-        /**
-         * 把一个上游响应流接入解析与转发管线，等其结束
-         * @param {object} upstreamResponse - axios stream 响应
-         * @returns {Promise<void>} 流处理完成的 Promise
-         */
-        const pipeUpstream = (upstreamResponse) => new Promise((resolve, reject) => {
-            const decoder = new TextDecoder('utf-8')
-            let buffer = ''
-
-            upstreamResponse.on('data', async (chunk) => {
-                const decodeText = decoder.decode(chunk, { stream: true })
-                buffer += decodeText
-
-                const chunks = []
-                let startIndex = 0
-
-                while (true) {
-                    const dataStart = buffer.indexOf('data: ', startIndex)
-                    if (dataStart === -1) break
-                    const dataEnd = buffer.indexOf('\n\n', dataStart)
-                    if (dataEnd === -1) break
-                    const dataChunk = buffer.substring(dataStart, dataEnd).trim()
-                    chunks.push(dataChunk)
-                    startIndex = dataEnd + 2
-                }
-
-                if (startIndex > 0) {
-                    buffer = buffer.substring(startIndex)
-                }
-
-                for (const item of chunks) {
-                    try {
-                        await processSSEPayload(item.replace("data: ", ''))
-                    } catch (error) {
-                        logger.error('流式数据处理错误', 'CHAT', '', error)
-                    }
-                }
-            })
-
-            upstreamResponse.on('end', () => resolve())
-            upstreamResponse.on('error', (err) => reject(err))
-        })
-
-        await pipeUpstream(response)
-
-        // tool_choice="required" 强校验：未触发任何工具调用则追加更强提示重试一次
-        if (hasTools && toolParser && !toolParser.hasEmittedAnyCall() && requiresToolCall(toolChoice)) {
+        if (hasTools && toolCalls.length === 0 && requiresToolCall(toolChoice)) {
             const retryHint = buildRequiredRetryHint(toolChoice)
             const retryBody = {
                 ...requestBody,
@@ -354,29 +255,55 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
             try {
                 const retryResp = await sendChatRequest(retryBody)
                 if (retryResp.status && retryResp.response) {
-                    await pipeUpstream(retryResp.response)
+                    const retryAccumulator = createPhaseAccumulator()
+                    await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, totalTokensRef)
+                    const retryContent = await buildOpenAIContentFromAccumulator(retryAccumulator, enable_thinking)
+                    const parsedRetry = parseToolCallsFromText(retryContent || '')
+                    if (parsedRetry.toolCalls.length > 0) {
+                        finalContent = parsedRetry.cleanedText
+                        toolCalls = parsedRetry.toolCalls
+                        accumulator.raw += retryAccumulator.raw
+                    }
                 }
             } catch (e) {
                 logger.error('required 模式重试失败', 'CHAT', '', e)
             }
         }
 
-        // flush 工具调用解析器中的残留内容
-        if (toolParser) {
-            const tail = toolParser.flush()
-            if (tail.textDelta) writeContentDelta(tail.textDelta)
-            if (tail.completedCalls.length > 0) writeToolCallsDelta(tail.completedCalls)
+        res.write(`data: ${JSON.stringify({
+            "id": `chatcmpl-${message_id}`,
+            "object": "chat.completion.chunk",
+            "created": Math.round(new Date().getTime() / 1000),
+            "choices": [{ "index": 0, "delta": { "role": "assistant" }, "finish_reason": null }]
+        })}\n\n`)
+
+        if (finalContent) {
+            res.write(`data: ${JSON.stringify({
+                "id": `chatcmpl-${message_id}`,
+                "object": "chat.completion.chunk",
+                "created": Math.round(new Date().getTime() / 1000),
+                "choices": [{ "index": 0, "delta": { "content": finalContent }, "finish_reason": null }]
+            })}\n\n`)
         }
 
-        // 处理最终的搜索信息
-        if ((config.outThink === false || !enable_thinking) && web_search_info && config.searchInfoMode === "text") {
-            const webSearchTable = await accountManager.generateMarkdownTable(web_search_info, "text")
-            writeContentDelta(`\n\n---\n${webSearchTable}`)
+        if (toolCalls.length > 0) {
+            const deltaToolCalls = toolCalls.map(call => ({
+                index: call.index,
+                id: call.id,
+                type: call.type,
+                function: call.function
+            }))
+            res.write(`data: ${JSON.stringify({
+                "id": `chatcmpl-${message_id}`,
+                "object": "chat.completion.chunk",
+                "created": Math.round(new Date().getTime() / 1000),
+                "choices": [{ "index": 0, "delta": { "tool_calls": deltaToolCalls }, "finish_reason": null }]
+            })}\n\n`)
         }
 
-        // 计算最终的token使用量
+        let totalTokens = totalTokensRef.value
         if (totalTokens.prompt_tokens === 0 && totalTokens.completion_tokens === 0) {
-            totalTokens = createUsageObject(requestBody?.messages || promptText, completionContent, null)
+            totalTokens = createUsageObject(requestBody?.messages || promptText, accumulator.raw || finalContent || '', null)
             logger.info(`流式使用tiktoken计算 - Prompt: ${totalTokens.prompt_tokens}, Completion: ${totalTokens.completion_tokens}, Total: ${totalTokens.total_tokens}`, 'CHAT')
         } else {
             logger.info(`流式使用上游真实Token - Prompt: ${totalTokens.prompt_tokens}, Completion: ${totalTokens.completion_tokens}, Total: ${totalTokens.total_tokens}`, 'CHAT')
@@ -385,24 +312,14 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
         totalTokens.prompt_tokens = Math.max(0, totalTokens.prompt_tokens || 0)
         totalTokens.completion_tokens = Math.max(0, totalTokens.completion_tokens || 0)
         totalTokens.total_tokens = totalTokens.prompt_tokens + totalTokens.completion_tokens
-
-        // Daily stats 累计——一次性归属到主请求账户
-        // 注：tool_choice=required retry 走的可能是另一个账户，但 retry 路径罕见，
-        // 全归属主账户是可接受的精度损失（PR #3wg.1 epic notes 已记）
         attributeChatUsage(options.currentAccount, totalTokens)
 
-        const finishReason = (toolParser && toolParser.hasEmittedAnyCall()) ? 'tool_calls' : 'stop'
+        const finishReason = toolCalls.length > 0 ? 'tool_calls' : 'stop'
         res.write(`data: ${JSON.stringify({
             "id": `chatcmpl-${message_id}`,
             "object": "chat.completion.chunk",
             "created": Math.round(new Date().getTime() / 1000),
-            "choices": [
-                {
-                    "index": 0,
-                    "delta": {},
-                    "finish_reason": finishReason
-                }
-            ]
+            "choices": [{ "index": 0, "delta": {}, "finish_reason": finishReason }]
         })}\n\n`)
 
         res.write(`data: ${JSON.stringify({
@@ -434,157 +351,22 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
  */
 const handleNonStreamResponse = async (res, response, enable_thinking, enable_web_search, model, requestBody = null, options = {}) => {
     try {
-        let fullContent = ''
-        let web_search_info = null
-        let thinking_start = false
-        let thinking_end = false
-        let appendedImageMarkdownSet = new Set()
-        let pendingImageMarkdownList = []
-
+        const accumulator = createPhaseAccumulator()
+        const totalTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
         const hasTools = !!options.has_tools
         const toolChoice = options.tool_choice
+        const promptText = getPromptText(requestBody)
 
-        // Token消耗量统计
-        let totalTokens = {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0
-        }
+        await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef)
 
-        // 提取prompt文本用于token估算
-        let promptText = ''
-        if (requestBody && requestBody.messages) {
-            promptText = requestBody.messages.map(msg => {
-                if (typeof msg.content === 'string') {
-                    return msg.content
-                } else if (Array.isArray(msg.content)) {
-                    return msg.content.map(item => item.text || '').join('')
-                }
-                return ''
-            }).join('\n')
-        }
-
-        /**
-         * 把一个上游响应流读完并累积到 fullContent
-         * @param {object} upstreamResponse - axios stream 响应
-         * @returns {Promise<void>} 流处理完成的 Promise
-         */
-        const accumulateUpstream = (upstreamResponse) => new Promise((resolve, reject) => {
-            const decoder = new TextDecoder('utf-8')
-            let buffer = ''
-
-            upstreamResponse.on('data', async (chunk) => {
-                const decodeText = decoder.decode(chunk, { stream: true })
-                buffer += decodeText
-
-                const chunks = []
-                let startIndex = 0
-
-                while (true) {
-                    const dataStart = buffer.indexOf('data: ', startIndex)
-                    if (dataStart === -1) break
-                    const dataEnd = buffer.indexOf('\n\n', dataStart)
-                    if (dataEnd === -1) break
-                    const dataChunk = buffer.substring(dataStart, dataEnd).trim()
-                    chunks.push(dataChunk)
-                    startIndex = dataEnd + 2
-                }
-
-                if (startIndex > 0) {
-                    buffer = buffer.substring(startIndex)
-                }
-
-                for (const item of chunks) {
-                    try {
-                        const dataContent = item.replace("data: ", '')
-                        const decodeJson = isJson(dataContent) ? JSON.parse(dataContent) : null
-                        if (decodeJson === null || !decodeJson.choices || decodeJson.choices.length === 0) {
-                            continue
-                        }
-
-                        if (decodeJson.usage) {
-                            totalTokens = {
-                                prompt_tokens: decodeJson.usage.prompt_tokens || totalTokens.prompt_tokens,
-                                completion_tokens: decodeJson.usage.completion_tokens || totalTokens.completion_tokens,
-                                total_tokens: decodeJson.usage.total_tokens || totalTokens.total_tokens
-                            }
-                        }
-
-                        const delta = decodeJson.choices[0].delta
-
-                        if (delta && delta.name === 'web_search') {
-                            web_search_info = delta.extra.web_search_info
-                        }
-
-                        const imageMarkdownList = getImageMarkdownListFromDelta(delta)
-                        if (imageMarkdownList.length > 0) {
-                            const newImageMarkdownList = imageMarkdownList.filter(it => !appendedImageMarkdownSet.has(it))
-
-                            if (thinking_start && !thinking_end) {
-                                for (const imageMarkdown of newImageMarkdownList) {
-                                    if (!pendingImageMarkdownList.includes(imageMarkdown)) {
-                                        pendingImageMarkdownList.push(imageMarkdown)
-                                    }
-                                }
-                            } else if (newImageMarkdownList.length > 0) {
-                                fullContent += `${newImageMarkdownList.join('\n\n')}\n\n`
-                                newImageMarkdownList.forEach(it => appendedImageMarkdownSet.add(it))
-                            }
-                        }
-
-                        if (!delta || !delta.content ||
-                            (delta.phase !== 'think' && delta.phase !== 'answer')) {
-                            continue
-                        }
-
-                        let content = delta.content
-
-                        if (delta.phase === 'think' && !thinking_start) {
-                            thinking_start = true
-                            if (web_search_info) {
-                                const webSearchTable = await accountManager.generateMarkdownTable(web_search_info, config.searchInfoMode)
-                                content = `<think>\n\n${webSearchTable}\n\n${content}`
-                            } else {
-                                content = `<think>\n\n${content}`
-                            }
-                        }
-                        if (delta.phase === 'answer' && !thinking_end && thinking_start) {
-                            thinking_end = true
-                            if (pendingImageMarkdownList.length > 0) {
-                                content = `\n\n</think>\n${pendingImageMarkdownList.join('\n\n')}\n\n${content}`
-                                pendingImageMarkdownList.forEach(it => appendedImageMarkdownSet.add(it))
-                                pendingImageMarkdownList = []
-                            } else {
-                                content = `\n\n</think>\n${content}`
-                            }
-                        }
-
-                        fullContent += content
-                    } catch (error) {
-                        logger.error('非流式数据处理错误', 'CHAT', '', error)
-                    }
-                }
-            })
-
-            upstreamResponse.on('end', () => resolve())
-            upstreamResponse.on('error', (err) => {
-                logger.error('非流式响应流读取错误', 'CHAT', '', err)
-                reject(err)
-            })
-        })
-
-        await accumulateUpstream(response)
-
-        // 工具调用解析：从 fullContent 抽取 <tool_call> 块
-        let assistantContent = fullContent
+        let assistantContent = await buildOpenAIContentFromAccumulator(accumulator, enable_thinking)
         let toolCalls = []
         if (hasTools) {
-            const parsed = parseToolCallsFromText(fullContent)
+            const parsed = parseToolCallsFromText(assistantContent || '')
             assistantContent = parsed.cleanedText
             toolCalls = parsed.toolCalls
         }
 
-        // tool_choice="required" 强校验：未触发则重试一次
         if (hasTools && toolCalls.length === 0 && requiresToolCall(toolChoice)) {
             const retryHint = buildRequiredRetryHint(toolChoice)
             const retryBody = {
@@ -598,13 +380,14 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
             try {
                 const retryResp = await sendChatRequest(retryBody)
                 if (retryResp.status && retryResp.response) {
-                    const before = fullContent
-                    await accumulateUpstream(retryResp.response)
-                    const retriedText = fullContent.slice(before.length)
-                    const parsedRetry = parseToolCallsFromText(retriedText)
+                    const retryAccumulator = createPhaseAccumulator()
+                    await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, totalTokensRef)
+                    const retryContent = await buildOpenAIContentFromAccumulator(retryAccumulator, enable_thinking)
+                    const parsedRetry = parseToolCallsFromText(retryContent || '')
                     if (parsedRetry.toolCalls.length > 0) {
                         toolCalls = parsedRetry.toolCalls
-                        assistantContent = (parseToolCallsFromText(fullContent).cleanedText)
+                        assistantContent = parsedRetry.cleanedText
+                        accumulator.raw += retryAccumulator.raw
                     }
                 }
             } catch (e) {
@@ -612,15 +395,9 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
             }
         }
 
-        // 处理最终的搜索信息
-        if ((config.outThink === false || !enable_thinking) && web_search_info && config.searchInfoMode === "text") {
-            const webSearchTable = await accountManager.generateMarkdownTable(web_search_info, "text")
-            assistantContent += `\n\n---\n${webSearchTable}`
-        }
-
-        // 计算最终的token使用量
+        let totalTokens = totalTokensRef.value
         if (totalTokens.prompt_tokens === 0 && totalTokens.completion_tokens === 0) {
-            totalTokens = createUsageObject(requestBody?.messages || promptText, fullContent, null)
+            totalTokens = createUsageObject(requestBody?.messages || promptText, accumulator.raw || assistantContent || '', null)
             logger.info(`非流式使用tiktoken计算 - Prompt: ${totalTokens.prompt_tokens}, Completion: ${totalTokens.completion_tokens}, Total: ${totalTokens.total_tokens}`, 'CHAT')
         } else {
             logger.info(`非流式使用上游真实Token - Prompt: ${totalTokens.prompt_tokens}, Completion: ${totalTokens.completion_tokens}, Total: ${totalTokens.total_tokens}`, 'CHAT')
@@ -629,8 +406,6 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
         totalTokens.prompt_tokens = Math.max(0, totalTokens.prompt_tokens || 0)
         totalTokens.completion_tokens = Math.max(0, totalTokens.completion_tokens || 0)
         totalTokens.total_tokens = totalTokens.prompt_tokens + totalTokens.completion_tokens
-
-        // Daily stats 累计——一次性归属到主请求账户（同 stream 分支注释）
         attributeChatUsage(options.currentAccount, totalTokens)
 
         const assistantMessage = { role: 'assistant', content: assistantContent || null }
@@ -638,27 +413,21 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
             assistantMessage.tool_calls = toolCalls
         }
 
-        const bodyTemplate = {
+        res.json({
             "id": `chatcmpl-${generateUUID()}`,
             "object": "chat.completion",
             "created": Math.round(new Date().getTime() / 1000),
             "model": model,
-            "choices": [
-                {
-                    "index": 0,
-                    "message": assistantMessage,
-                    "finish_reason": toolCalls.length > 0 ? "tool_calls" : "stop"
-                }
-            ],
+            "choices": [{
+                "index": 0,
+                "message": assistantMessage,
+                "finish_reason": toolCalls.length > 0 ? "tool_calls" : "stop"
+            }],
             "usage": totalTokens
-        }
-        res.json(bodyTemplate)
+        })
     } catch (error) {
         logger.error('非流式聊天处理错误', 'CHAT', '', error)
-        res.status(500)
-            .json({
-                error: "Service error"
-            })
+        res.status(500).json({ error: "Service error" })
     }
 }
 

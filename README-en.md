@@ -12,6 +12,57 @@
 
 </div>
 
+
+## Structured answer-separation edition
+
+This repository is a structured-output refactor based on `Rfym21/Qwen2API`, focused on fixing **thinking / final-answer mixing** in OpenAI-compatible chat responses.
+
+### What changed in this branch
+
+- Added `src/utils/answer-extractor.js` to strip residual `<think>...</think>` blocks and common reasoning prefixes.
+- Refactored `src/controllers/chat.js` so OpenAI `stream` and `non-stream` share the same phase-accumulator logic.
+- Upstream SSE deltas are accumulated into independent buffers:
+  - `think`
+  - `answer`
+  - `unknown`
+  - `raw` (debug/token estimation only)
+- When `OUTPUT_THINK=false`, only the answer buffer is exposed externally.
+- Preserved OpenAI `tools` and `tool_choice=required`, verified in both stream and non-stream modes.
+- To avoid premature reasoning leakage, the OpenAI stream path uses: full upstream read → structured cleanup → SSE output.
+
+### Privacy & publishing
+
+This public repository does **not** include any real account, token, cookie, password, production `.env`, or `data/data.json`.
+
+Ignored by default:
+
+- `.env`
+- `data/data.json`
+- `data/accounts.json`
+- `logs/`
+- `caches/`
+
+### Default example config
+
+```bash
+API_KEY=qwen2api
+OUTPUT_THINK=false
+```
+
+Change `API_KEY` before exposing the service publicly.
+
+### Referenced projects
+
+| Project | URL | Reference point |
+|---|---|---|
+| Rfym21/Qwen2API | https://github.com/Rfym21/Qwen2API | base implementation, OpenAI/Anthropic compatibility, accounts, tools |
+| YuJunZhiXue/qwen2API | https://github.com/YuJunZhiXue/qwen2API | Go runtime, WAF/keepalive direction, deployment shape |
+| 123hi123/qwen2api-rs | https://github.com/123hi123/qwen2api-rs | Rust gateway rewrite direction |
+| encryptarun/qwen-api | https://github.com/encryptarun/qwen-api | Qwen Web proxy / OpenAI-compatible endpoint design |
+| Tiaeventful732/QwenChat2Api | https://github.com/Tiaeventful732/QwenChat2Api | Web-chat to API conversion direction |
+
+---
+
 ## 🛠️ Quick Start
 
 ### Project Description
@@ -88,7 +139,7 @@ LISTEN_ADDRESS=localhost       # Listen address
 SERVICE_PORT=3000             # Service port
 
 # 🔐 Security Configuration
-API_KEY=sk-123456,sk-456789   # API key (required, supports multiple keys)
+API_KEY=qwen2api   # API key (required, supports multiple keys)
 ACCOUNTS=                     # Account configuration (format: user1:pass1[|proxy_url],user2:pass2[|proxy_url])
 
 # 🚀 PM2 Multi-process Configuration
@@ -121,7 +172,7 @@ CACHE_MODE=default            # Image cache mode (default/file)
 |-----------|-------------|---------|
 | `LISTEN_ADDRESS` | Service listen address | `localhost` or `0.0.0.0` |
 | [SERVICE_PORT](file://d:\Code\Qwen2API\src\start.js#L12-L12) | Service running port | `3000` |
-| `API_KEY` | API access key, supports multi-key configuration. The first is the admin key (can access frontend management page), others are regular keys (API calls only). Multiple keys separated by commas | `sk-admin123,sk-user456,sk-user789` |
+| `API_KEY` | API access key, supports multi-key configuration. The first is the admin key (can access frontend management page), others are regular keys (API calls only). Multiple keys separated by commas | `qwen2api,user-key-1,user-key-2` |
 | [PM2_INSTANCES](file://d:\Code\Qwen2API\src\start.js#L11-L11) | Number of PM2 processes | `1`/`4`/`max` |
 | `PM2_MAX_MEMORY` | PM2 memory limit | `100M`/`1G`/`2G` |
 | `SEARCH_INFO_MODE` | Search result display format | `table` or [text](file://d:\Code\Qwen2API\src\utils\tool-prompt.js#L206-L206) |
@@ -152,10 +203,10 @@ The `API_KEY` environment variable supports configuring multiple API keys to imp
 **Configuration Format:**
 ```bash
 # Single key (admin privileges)
-API_KEY=sk-admin123
+API_KEY=qwen2api
 
 # Multiple keys (first is admin, others are regular users)
-API_KEY=sk-admin123,sk-user456,sk-user789
+API_KEY=qwen2api,user-key-1,user-key-2
 ```
 
 **Permission Description:**
@@ -208,7 +259,7 @@ caches/
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -e API_KEY=sk-admin123,sk-user456,sk-user789 \
+  -e API_KEY=qwen2api,user-key-1,user-key-2 \
   -e DATA_SAVE_MODE=none \
   -e CACHE_MODE=file \
   -e ACCOUNTS= \
@@ -395,10 +446,10 @@ Authorization: Bearer sk-your-api-key
 **Authentication Example:**
 ```bash
 # Using admin key
-curl -H "Authorization: Bearer sk-admin123" http://localhost:3000/v1/models
+curl -H "Authorization: Bearer qwen2api" http://localhost:3000/v1/models
 
 # Using regular key
-curl -H "Authorization: Bearer sk-user456" http://localhost:3000/v1/chat/completions
+curl -H "Authorization: Bearer user-key-1" http://localhost:3000/v1/chat/completions
 ```
 
 ### 🔍 Get Model List

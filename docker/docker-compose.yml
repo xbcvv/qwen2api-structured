@@ -1,7 +1,10 @@
 services:
   qwen2api:
     container_name: qwen2api
-    image: rfym21/qwen2api:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: qwen2api-structured:latest
     restart: always
     ports:
       - "3000:3000"
@@ -17,7 +20,7 @@ services:
       # API 密钥 (非必填)
       # 如果需要使用多账户或使用内置账户，请填写
       # API key (optional). Required for multi-account or built-in account usage
-      - API_KEY=sk-123456
+      - API_KEY=qwen2api
       # 监听地址(非必填)
       # Listen address (optional)
       - LISTEN_ADDRESS=
@@ -37,7 +40,7 @@ services:
       - SEARCH_INFO_MODE=table
       # 是否输出思考过程
       # Whether to output the thinking process
-      - OUTPUT_THINK=true
+      - OUTPUT_THINK=false
       # 简化模型映射 (true: 只返回基础模型, false: 返回完整模型列表)
       # Simplified model mapping (true: base models only, false: full list)
       - SIMPLE_MODEL_MAP=false
