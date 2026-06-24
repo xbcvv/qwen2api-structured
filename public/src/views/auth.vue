@@ -40,7 +40,15 @@ const handleLogin = async () => {
       }
     })
     if (res.data.status == 200) {
-      localStorage.setItem('apiKey', apiKey.value)
+      if (res.data.isAdmin) {
+        localStorage.setItem('adminKey', apiKey.value)
+        localStorage.setItem('isAdmin', 'true')
+      } else {
+        localStorage.setItem('apiKey', apiKey.value)
+        localStorage.setItem('isAdmin', 'false')
+        alert(t('auth.notAdmin'))
+        return
+      }
       router.push({ path: '/', replace: true })
     } else {
       alert(t('auth.error'))

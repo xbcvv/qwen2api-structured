@@ -9,13 +9,10 @@ const dataPersistence = new DataPersistence()
 
 
 router.get('/settings', adminKeyVerify, async (req, res) => {
-  // 分离管理员密钥和普通密钥
-  const regularKeys = config.apiKeys.filter(key => key !== config.adminKey)
-
   res.json({
-    apiKey: config.apiKey, // 保持向后兼容
-    adminKey: config.adminKey,
-    regularKeys: regularKeys,
+    adminKeySet: !!config.adminKey,
+    adminKeyHint: config.adminKey ? `${config.adminKey.slice(0, 3)}***${config.adminKey.slice(-3)}` : '',
+    regularKeys: config.apiKeys,
     defaultHeaders: config.defaultHeaders,
     defaultCookie: config.defaultCookie,
     autoRefresh: config.autoRefresh,

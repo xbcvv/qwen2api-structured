@@ -13,32 +13,39 @@ const validateApiKey = (providedKey) => {
   // 移除Bearer前缀
   const cleanKey = providedKey.startsWith('Bearer ') ? providedKey.slice(7) : providedKey
 
-  // 检查是否在有效的API keys列表中
-  const isValid = config.apiKeys.includes(cleanKey)
-  const isAdmin = cleanKey === config.adminKey
+  // 管理员密钥验证：只检查 adminKey
+  const isAdmin = cleanKey === config.adminKey && !!config.adminKey
+
+  // 普通API Key验证：检查 apiKeys 列表 或 adminKey 本身也有效
+  const isDownstreamKey = config.apiKeys.includes(cleanKey)
+  const isValid = isAdmin || isDownstreamKey
 
   return { isValid, isAdmin }
 }
 
 /**
- * API Key验证中间件 - 验证任何有效的API Key
+ * API Key验证中间件 - 只验证下游 API Key（用于 /v1/*、/cli/* 等外部调用接口）
  */
 const apiKeyVerify = (req, res, next) => {
   const apiKey = req.headers['authorization'] || req.headers['Authorization'] || req.headers['x-api-key']
-  const { isValid, isAdmin } = validateApiKey(apiKey)
-
-  if (!isValid) {
+  if (!apiKey) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  // 将权限信息附加到请求对象
-  req.isAdmin = isAdmin
+  const cleanKey = apiKey.startsWith('Bearer ') ? apiKey.slice(7) : apiKey
+  const isDownstreamKey = config.apiKeys.includes(cleanKey)
+
+  if (!isDownstreamKey) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  req.isAdmin = false
   req.apiKey = apiKey
   next()
 }
 
 /**
- * 管理员权限验证中间件 - 只允许管理员API Key
+ * 管理员权限验证中间件 - 只允许管理员API Key（用于管理接口）
  */
 const adminKeyVerify = (req, res, next) => {
   const apiKey = req.headers['authorization'] || req.headers['Authorization'] || req.headers['x-api-key']
@@ -58,4 +65,3 @@ module.exports = {
   adminKeyVerify,
   validateApiKey
 }
-

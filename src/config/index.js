@@ -1,21 +1,26 @@
 const dotenv = require('dotenv')
 dotenv.config()
 
+const parseKeyList = (value) => {
+    if (!value) return []
+    return String(value).split(',').map(key => key.trim()).filter(key => key.length > 0)
+}
+
 /**
- * 解析API_KEY环境变量，支持逗号分隔的多个key
- * @returns {Object} 包含apiKeys数组和adminKey的对象
+ * 管理员登录密钥与下游 API Key 分离：
+ * - ADMIN_KEY：只用于 Web 管理后台和 /api/* 管理接口
+ * - API_KEYS / API_KEY：只用于 OpenAI-compatible 下游接口
+ * 兼容旧环境：未设置 ADMIN_KEY 时，仍以 API key 列表第一个作为 adminKey。
  */
 const parseApiKeys = () => {
-    const apiKeyEnv = process.env.API_KEY
-    if (!apiKeyEnv) {
-        return { apiKeys: [], adminKey: null }
-    }
+    const downstreamKeys = parseKeyList(process.env.API_KEYS || process.env.API_KEY)
+    const explicitAdminKey = (process.env.ADMIN_KEY || '').trim()
+    const adminKey = explicitAdminKey || (downstreamKeys.length > 0 ? downstreamKeys[0] : null)
+    const apiKeys = explicitAdminKey
+        ? downstreamKeys.filter(key => key !== explicitAdminKey)
+        : downstreamKeys
 
-    const keys = apiKeyEnv.split(',').map(key => key.trim()).filter(key => key.length > 0)
-    return {
-        apiKeys: keys,
-        adminKey: keys.length > 0 ? keys[0] : null
-    }
+    return { apiKeys, adminKey }
 }
 
 const { apiKeys, adminKey } = parseApiKeys()

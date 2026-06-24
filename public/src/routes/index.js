@@ -34,51 +34,56 @@ const router = createRouter({
   routes
 })
 
+// 管理后台鉴权：使用 adminKey
+const requireAdmin = ['/', '/settings', '/statistics']
 
-// 路由守卫
 router.beforeEach(async (to, from, next) => {
-
   if (to.path === '/auth') {
     next()
-  } else {
+  } else if (to.path === '/chat') {
+    // 聊天测试页使用下游 API Key，无需 admin 验证
     const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
-      alert('请先设置身份验证apiKey')
       next({ path: '/auth' })
     } else {
       try {
-        const verifyResponse = await axios.post('/verify', {
-          apiKey: apiKey
-        })
-
+        const verifyResponse = await axios.post('/verify', { apiKey })
         if (verifyResponse.data.status === 200) {
-          const isAdmin = verifyResponse.data.isAdmin
-
-          // 存储用户权限信息
-          localStorage.setItem('isAdmin', isAdmin.toString())
-
-          // 检查是否需要管理员权限
-          if ((to.path === '/' || to.path === '/settings' || to.path === '/statistics') && !isAdmin) {
-            alert('您没有访问管理页面的权限')
-            next({ path: '/auth' })
-            return
-          }
-
           next()
         } else {
           localStorage.removeItem('apiKey')
-          localStorage.removeItem('isAdmin')
           next({ path: '/auth' })
         }
       } catch (error) {
         localStorage.removeItem('apiKey')
+        next({ path: '/auth' })
+      }
+    }
+  } else if (requireAdmin.includes(to.path)) {
+    // 管理后台页面：只用 adminKey
+    const adminKey = localStorage.getItem('adminKey')
+    if (!adminKey) {
+      next({ path: '/auth' })
+    } else {
+      try {
+        const verifyResponse = await axios.post('/verify', { apiKey: adminKey })
+        if (verifyResponse.data.status === 200 && verifyResponse.data.isAdmin) {
+          localStorage.setItem('isAdmin', 'true')
+          next()
+        } else {
+          localStorage.removeItem('adminKey')
+          localStorage.removeItem('isAdmin')
+          next({ path: '/auth' })
+        }
+      } catch (error) {
+        localStorage.removeItem('adminKey')
         localStorage.removeItem('isAdmin')
         next({ path: '/auth' })
       }
     }
+  } else {
+    next()
   }
-
 })
-
 
 export default router

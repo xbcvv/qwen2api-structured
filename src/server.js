@@ -80,9 +80,9 @@ const applyPersistedSettings = async () => {
       const v = parseInt(persisted.chatRetryBackoffMs, 10)
       if (!isNaN(v) && v >= 0) config.chatRetryBackoffMs = v
     }
-    if (persisted.apiKeys?.length > 1) {
-      config.apiKeys = persisted.apiKeys;
-      config.adminKey = persisted.apiKeys[0];
+    // Only restore persisted downstream API keys; never touch adminKey from persistence
+    if (persisted.apiKeys?.length > 0) {
+      config.apiKeys = persisted.apiKeys.filter(key => key !== config.adminKey)
     }
   } catch (err) {
     logger.warn('加载持久化设置失败, 使用 env/默认值', 'CONFIG', '', err.message)

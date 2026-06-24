@@ -3,7 +3,8 @@
     "error": "apiKey verification failed, please re-enter!",
     "login": "Log in",
     "placeholder": "Please enter the administrator account",
-    "title": "Administrator authentication"
+    "title": "Administrator authentication",
+    "notAdmin": "This key is not an admin key, cannot log in to admin panel"
   },
   "dash": {
     "acct": {
@@ -156,7 +157,10 @@
     "simpleModelMap": "🎯 Simplified model mapping",
     "simpleModelMapDesc": "Only the basic model is returned, excluding variations such as thinking, search, and image.",
     "thinkOutput": "💡 Think Output",
-    "title": "System settings"
+    "title": "System settings",
+    "adminKeySet": "Configured",
+    "adminKeyUnset": "Not configured",
+    "adminKeyMissing": "⚠️ Please set ADMIN_KEY in environment variables"
   },
   "smsg": {
     "apiKeyFailed": "API Key saving failed:",

@@ -18,14 +18,15 @@
                     <div class="relative flex flex-col gap-4">
                         <label class="text-gray-700 font-semibold text-lg">{{ t('settings.apiKeyTitle') }}</label>
 
-                        <!-- 管理员密钥 -->
+                        <!-- 管理员密钥状态 -->
                         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <div class="flex items-center gap-2 mb-2">
                                 <span class="text-yellow-600 font-semibold">{{ t('settings.adminKey') }}</span>
-                                <span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">{{ t('settings.adminReadonly') }}</span>
+                                <span v-if="settings.adminKeySet" class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">{{ t('settings.adminKeySet') }}</span>
+                                <span v-else class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">{{ t('settings.adminKeyUnset') }}</span>
                             </div>
-                            <input :value="settings.adminKey" type="text" readonly
-                                class="w-full rounded-lg border-gray-300 bg-gray-100 shadow-sm h-10 text-sm px-3 cursor-not-allowed">
+                            <div v-if="settings.adminKeyHint" class="text-sm text-gray-600">🔑 {{ settings.adminKeyHint }}</div>
+                            <div v-else class="text-sm text-red-500">{{ t('settings.adminKeyMissing') }}</div>
                         </div>
 
                         <!-- 普通密钥列表 -->
@@ -186,8 +187,8 @@ import LangSwitcher from '../components/LangSwitcher.vue'
 const { t } = useI18n()
 
 const settings = ref({
-    apiKey: localStorage.getItem('apiKey'),
-    adminKey: '',
+    adminKeySet: false,
+    adminKeyHint: '',
     regularKeys: [],
     defaultHeaders: '',
     defaultCookie: '',
@@ -208,11 +209,11 @@ const loadSettings = async () => {
     try {
         const res = await axios.get('/api/settings', {
             headers: {
-                'Authorization': localStorage.getItem('apiKey')
+                'Authorization': localStorage.getItem('adminKey') || ''
             }
         })
-        settings.value.apiKey = res.data.apiKey
-        settings.value.adminKey = res.data.adminKey || ''
+        settings.value.adminKeySet = res.data.adminKeySet
+        settings.value.adminKeyHint = res.data.adminKeyHint || ''
         settings.value.regularKeys = res.data.regularKeys || []
         settings.value.defaultHeaders = JSON.stringify(res.data.defaultHeaders)
         settings.value.defaultCookie = res.data.defaultCookie
@@ -232,7 +233,7 @@ const loadSettings = async () => {
 const saveApiKey = async () => {
     try {
         await axios.post('/api/setApiKey', { apiKey: settings.value.apiKey }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.apiKeySaved'))
     } catch (error) {
@@ -245,7 +246,7 @@ const saveAutoRefresh = async () => {
             autoRefresh: settings.value.autoRefresh,
             autoRefreshInterval: settings.value.autoRefreshInterval
         }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.autoRefreshSaved'))
     } catch (error) {
@@ -257,7 +258,7 @@ const saveBatchLoginConcurrency = async () => {
         await axios.post('/api/setBatchLoginConcurrency', {
             batchLoginConcurrency: settings.value.batchLoginConcurrency
         }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.batchSaved'))
     } catch (error) {
@@ -267,7 +268,7 @@ const saveBatchLoginConcurrency = async () => {
 const saveOutThink = async () => {
     try {
         await axios.post('/api/setOutThink', { outThink: settings.value.outThink }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.thinkSaved'))
     } catch (error) {
@@ -277,7 +278,7 @@ const saveOutThink = async () => {
 const saveSearchInfoMode = async () => {
     try {
         await axios.post('/api/search-info-mode', { searchInfoMode: settings.value.searchInfoMode }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.searchModeSaved'))
     } catch (error) {
@@ -287,7 +288,7 @@ const saveSearchInfoMode = async () => {
 const saveSimpleModelMap = async () => {
     try {
         await axios.post('/api/simple-model-map', { simpleModelMap: settings.value.simpleModelMap }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.simpleMapSaved'))
     } catch (error) {
@@ -300,7 +301,7 @@ const saveRetryConfig = async () => {
             chatRetryCount: settings.value.chatRetryCount,
             chatRetryBackoffMs: settings.value.chatRetryBackoffMs
         }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.retrySaved'))
     } catch (error) {
@@ -317,7 +318,7 @@ const addRegularKey = async () => {
 
     try {
         await axios.post('/api/addRegularKey', { apiKey: newApiKey.value.trim() }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.keyAdded'))
         newApiKey.value = ''
@@ -334,7 +335,7 @@ const deleteRegularKey = async (index) => {
     const keyToDelete = settings.value.regularKeys[index]
     try {
         await axios.post('/api/deleteRegularKey', { apiKey: keyToDelete }, {
-            headers: { 'Authorization': localStorage.getItem('apiKey') || '' }
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
         })
         alert(t('smsg.keyDeleted'))
         await loadSettings()

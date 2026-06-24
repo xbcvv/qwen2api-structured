@@ -3,7 +3,8 @@
     "title": "管理员身份验证",
     "placeholder": "请输入管理员账号",
     "login": "登录",
-    "error": "apiKey 校验失败,请重新输入!"
+    "error": "apiKey 校验失败,请重新输入!",
+    "notAdmin": "此密钥不是管理员密钥，无法登录管理后台"
   },
   "dash": {
     "title": "Token Manager",
@@ -151,7 +152,10 @@
     "addKeyTitle": "添加普通API Key",
     "addKeyPlaceholder": "请输入API Key",
     "cancel": "取消",
-    "add": "添加"
+    "add": "添加",
+    "adminKeySet": "已配置",
+    "adminKeyUnset": "未配置",
+    "adminKeyMissing": "⚠️ 请在环境变量 ADMIN_KEY 中设置管理员密钥"
   },
   "smsg": {
     "apiKeySaved": "API Key保存成功",
