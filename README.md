@@ -1,12 +1,10 @@
 <div align="center">
 
-> [中文](README.md) | [🇷🇺 Русская версия](README-ru.md) | [English](README-en.md)
-
 # 🚀 Qwen-Proxy
 
-[![Version](https://img.shields.io/badge/version-2026.04.29.23.45-blue.svg)](https://github.com/Rfym21/Qwen2API)
+[![Version](https://img.shields.io/badge/version-2026.06.25-blue.svg)](https://github.com/xbcvv/qwen2api-structured)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Docker](https://img.shields.io/badge/Docker-supported-blue.svg)](https://hub.docker.com/r/rfym21/qwen2api)
+[![Docker](https://img.shields.io/badge/Docker-supported-blue.svg)](https://docs.docker.com/get-docker/)
 
 [🔗 加入交流群](https://t.me/nodejs_project) | [📖 文档](#api-文档) | [🐳 Docker 部署](#docker-部署)
 
@@ -59,7 +57,7 @@ OUTPUT_THINK=false
 
 | 项目 | 地址 | 参考点 |
 |---|---|---|
-| Rfym21/Qwen2API | https://github.com/Rfym21/Qwen2API | 本仓库基础；OpenAI/Anthropic 兼容、账号轮询、tools 支持 |
+| Rfym21/Qwen2API | https://github.com/Rfym21/Qwen2API | 上游基础仓库；OpenAI/Anthropic 兼容、账号轮询、tools 支持 |
 | YuJunZhiXue/qwen2API | https://github.com/YuJunZhiXue/qwen2API | Go runtime、WAF/keepalive、WebUI 与部署形态 |
 | 123hi123/qwen2api-rs | https://github.com/123hi123/qwen2api-rs | Rust 网关化重写、OpenAI/Anthropic/Gemini 兼容方向 |
 | encryptarun/qwen-api | https://github.com/encryptarun/qwen-api | Qwen Web API proxy、OpenAI-compatible endpoints |
@@ -71,8 +69,8 @@ OUTPUT_THINK=false
 git clone <this-repo-url>
 cd <repo>
 cp .env.example .env
-# 修改 .env 里的 API_KEY / ACCOUNTS / DATA_SAVE_MODE
-docker compose -f docker/docker-compose.yml up -d --build
+# 修改 .env 里的 ADMIN_KEY / API_KEY / ACCOUNTS / DATA_SAVE_MODE
+docker build -f docker/Dockerfile -t qwen2api-structured:local .
 ```
 
 ---
@@ -153,18 +151,15 @@ LISTEN_ADDRESS=localhost       # 监听地址
 SERVICE_PORT=3000             # 服务端口
 
 # 🔐 安全配置
-API_KEY=qwen2api   # API 密钥 (必填，支持多密钥)
-ACCOUNTS=                     # 账户配置 (格式: user1:pass1[|proxy_url],user2:pass2[|proxy_url])
-
-# 🚀 PM2 多进程配置
-PM2_INSTANCES=1               # PM2进程数量 (1/数字/max)
-PM2_MAX_MEMORY=1G             # PM2内存限制 (100M/1G/2G等)
-                              # 注意: PM2集群模式下所有进程共用同一个端口
+ADMIN_KEY=change-this-admin-key    # 管理后台密钥，只用于 Web 管理后台和 /api/* 管理接口
+API_KEY=change-this-api-key        # 下游 API 密钥；多个密钥用逗号分隔
+ACCOUNTS=                          # 账户配置 (格式: user1:pass1[|proxy_url],user2:pass2[|proxy_url])
 
 # 🔍 功能配置
 SEARCH_INFO_MODE=table        # 搜索信息展示模式 (table/text)
 OUTPUT_THINK=false             # 是否输出思考过程 (true/false)
 SIMPLE_MODEL_MAP=false        # 简化模型映射 (true/false)
+CHAT_STREAM_DEFAULT=true      # 测试会话默认是否使用流式响应 (true/false)
 
 # 🌐 代理与反代配置
 QWEN_CHAT_PROXY_URL=          # 自定义 Chat API 反代URL (默认: https://chat.qwen.ai)
@@ -186,12 +181,12 @@ CACHE_MODE=default            # 图片缓存模式 (default/file)
 |------|------|------|
 | `LISTEN_ADDRESS` | 服务监听地址 | `localhost` 或 `0.0.0.0` |
 | `SERVICE_PORT` | 服务运行端口 | `3000` |
-| `API_KEY` | API 访问密钥，支持多密钥配置。第一个为管理员密钥（可访问前端管理页面），其他为普通密钥（仅可调用API）。多个密钥用逗号分隔 | `qwen2api,user-key-1,user-key-2` |
-| `PM2_INSTANCES` | PM2进程数量 | `1`/`4`/`max` |
-| `PM2_MAX_MEMORY` | PM2内存限制 | `100M`/`1G`/`2G` |
+| `ADMIN_KEY` | 管理后台密钥。只用于 Web 管理后台和 `/api/*` 管理接口；显式配置后不会被 `data/data.json` 中的旧值覆盖 | `adm-xxx` |
+| `API_KEY` / `API_KEYS` | 下游 API 访问密钥，支持多个普通密钥，逗号分隔；用于 OpenAI-compatible `/v1/*` 调用 | `sk-xxx,user-key-1` |
 | `SEARCH_INFO_MODE` | 搜索结果展示格式 | `table` 或 `text` |
 | `OUTPUT_THINK` | 是否显示 AI 思考过程 | `true` 或 `false` |
 | `SIMPLE_MODEL_MAP` | 简化模型映射，只返回基础模型不包含变体 | `true` 或 `false` |
+| `CHAT_STREAM_DEFAULT` | 测试会话默认是否使用流式响应；也可在系统设置中修改 | `true` 或 `false` |
 | `QWEN_CHAT_PROXY_URL` | 自定义 Chat API 反代地址 | `https://your-proxy.com` |
 | `QWEN_CLI_PROXY_URL` | 自定义 CLI API 反代地址 | `https://your-cli-proxy.com` |
 | `PROXY_URL` | 出站请求代理地址，支持 HTTP/HTTPS/SOCKS5 | `http://127.0.0.1:7890` |
@@ -210,35 +205,31 @@ CACHE_MODE=default            # 图片缓存模式 (default/file)
 <img src="./docs/images/upstash.png" alt="Upstash Redis" width="600">
 </div>
 
-#### 🔑 多API_KEY配置说明
+#### 🔑 管理密钥与下游 API Key 说明
 
-`API_KEY` 环境变量支持配置多个API密钥，用于实现不同权限级别的访问控制：
+本分支将管理后台密钥与下游调用密钥分离：
 
-**配置格式:**
 ```bash
-# 单个密钥（管理员权限）
-API_KEY=qwen2api
+# 管理后台登录与 /api/* 管理接口
+ADMIN_KEY=adm-your-admin-key
 
-# 多个密钥（第一个为管理员，其他为普通用户）
-API_KEY=qwen2api,user-key-1,user-key-2
+# OpenAI-compatible /v1/* 下游调用密钥；可配置多个
+API_KEY=sk-user-1,sk-user-2
+# 或
+API_KEYS=sk-user-1,sk-user-2
 ```
 
-**权限说明:**
+**权限说明：**
 
 | 密钥类型 | 权限范围 | 功能描述 |
 |----------|----------|----------|
-| **管理员密钥** | 完整权限 | • 访问前端管理页面<br>• 修改系统设置<br>• 调用所有API接口<br>• 添加/删除普通密钥 |
-| **普通密钥** | API调用权限 | • 仅可调用API接口<br>• 无法访问前端管理页面<br>• 无法修改系统设置 |
+| `ADMIN_KEY` | 管理权限 + API 调用权限 | 登录 Web 管理后台、修改系统设置、管理普通密钥、调用 `/v1/*` |
+| `API_KEY` / `API_KEYS` | API 调用权限 | 仅可调用 OpenAI-compatible `/v1/*` 接口，不能访问管理后台 |
 
-**使用场景:**
-- **团队协作**: 为不同团队成员分配不同权限的API密钥
-- **应用集成**: 为第三方应用提供受限的API访问权限
-- **安全隔离**: 将管理权限与普通使用权限分离
-
-**注意事项:**
-- 第一个API_KEY自动成为管理员密钥，拥有最高权限
-- 管理员可以通过前端页面动态添加或删除普通密钥
-- 所有密钥都可以正常调用API接口，权限差异仅体现在管理功能上
+**注意事项：**
+- 生产环境必须修改默认密钥，禁止暴露默认值。
+- `.env` 中显式配置 `ADMIN_KEY` 后，启动时以 `.env` 为准，不会被 `data/data.json` 里的旧 `settings.adminKey` 覆盖。
+- Web 系统设置中修改管理员密钥会影响当前进程；如果 `.env` 中配置了 `ADMIN_KEY`，重启后仍以 `.env` 为准。
 
 #### 📸 CACHE_MODE 缓存模式说明
 
@@ -247,11 +238,10 @@ API_KEY=qwen2api,user-key-1,user-key-2
 | 模式 | 说明 | 适用场景 |
 |------|------|----------|
 | `default` | 内存缓存模式 (默认) | 单进程部署，重启后缓存丢失 |
-| `file` | 文件缓存模式 | 多进程部署，缓存持久化到 `./caches/` 目录 |
+| `file` | 文件缓存模式 | 需要跨重启保留缓存，或 Docker 挂载 `./caches/` 目录 |
 
 **推荐配置:**
 - **单进程部署**: 使用 `CACHE_MODE=default`，性能最佳
-- **多进程/集群部署**: 使用 `CACHE_MODE=file`，确保进程间缓存共享
 - **Docker 部署**: 建议使用 `CACHE_MODE=file` 并挂载 `./caches` 目录
 
 **文件缓存目录结构:**
@@ -266,181 +256,156 @@ caches/
 
 ## 🚀 部署方式
 
-### 🐳 Docker 部署
+### 🐳 Docker 部署（推荐）
 
-#### 方式一：直接运行
+```bash
+# 使用已有的 docker-compose 文件启动
+cp .env.example .env
+# 编辑 .env，至少修改 ADMIN_KEY / API_KEY / DATA_SAVE_MODE
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+也可以直接运行镜像：
 
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -e API_KEY=qwen2api,user-key-1,user-key-2 \
-  -e DATA_SAVE_MODE=none \
+  -e ADMIN_KEY=adm-your-admin-key \
+  -e API_KEY=sk-user-1,sk-user-2 \
+  -e DATA_SAVE_MODE=file \
   -e CACHE_MODE=file \
-  -e ACCOUNTS= \
+  -e OUTPUT_THINK=false \
+  -e CHAT_STREAM_DEFAULT=true \
+  -v ./data:/app/data \
+  -v ./logs:/app/logs \
   -v ./caches:/app/caches \
   --name qwen2api \
-  rfym21/qwen2api:latest
+  qwen2api-structured:local
 ```
 
-#### 方式二：Docker Compose
-
-```bash
-# 下载配置文件
-curl -o docker-compose.yml https://raw.githubusercontent.com/Rfym21/Qwen2API/refs/heads/main/docker/docker-compose.yml
-
-# 启动服务
-docker compose pull && docker compose up -d
-```
-
-### 📦 本地部署
+### 📦 本地开发运行
 
 ```bash
 # 克隆项目
-git clone https://github.com/Rfym21/Qwen2API.git
-cd Qwen2API
+git clone <this-repo-url>
+cd <repo>
 
-# 安装依赖
+# 安装后端依赖
 npm install
+
+# 安装并构建前端
+cd public
+npm install
+npm run build
+cd ..
 
 # 配置环境变量
 cp .env.example .env
-# 编辑 .env 文件
+# 编辑 .env 文件，至少修改 ADMIN_KEY / API_KEY / DATA_SAVE_MODE
 
-# 智能启动 (推荐 - 自动判断单进程/多进程)
-npm start
+# 启动服务
+node src/server.js
 
 # 开发模式
 npm run dev
 ```
-
-### 🚀 PM2 多进程部署
-
-使用 PM2 进行生产环境多进程部署，提供更好的性能和稳定性。
-
-**重要说明**: PM2 集群模式下，所有进程共用同一个端口，PM2 会自动进行负载均衡。
-
-### 🤖 智能启动模式
-
-使用 `npm start` 可以自动判断启动方式：
-
-- 当 `PM2_INSTANCES=1` 时，使用单进程模式
-- 当 `PM2_INSTANCES>1` 时，使用 Node.js 集群模式
-- 自动限制进程数不超过 CPU 核心数
-
-### ☁️ Hugging Face 部署
-
-快速部署到 Hugging Face Spaces：
-
-[![Deploy to Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Deploy-yellow)](https://huggingface.co/spaces/devme/q2waepnilm)
-
-<div>
-<img src="./docs/images/hf.png" alt="Hugging Face Deployment" width="600">
-</div>
-
-### ☁️ Vercel 部署
-
-快速部署到 Vercel：
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRfym21%2FQwen2API)
-
-需要配置环境变量：
-```
-ACCOUNTS=email:password
-SERVICE_PORT=80
-API_KEY=sk-xxx
-DATA_SAVE_MODE=none
-```
-
 
 ---
 
 ## 📁 项目结构
 
 ```
-Qwen2API/
+qwen2api-structured/
 ├── README.md
-├── ecosystem.config.js              # PM2配置文件
-├── package.json
+├── package.json                         # 后端依赖配置
 │
-├── docker/                          # Docker配置目录
+├── docker/                              # Docker 配置目录
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   └── docker-compose-redis.yml
 │
-├── caches/                          # 缓存文件目录
-├── data/                            # 数据文件目录
-│   ├── data.json
-│   └── data_template.json
-├── scripts/                         # 脚本目录
-│   └── fingerprint-injector.js      # 浏览器指纹注入脚本
+├── data/                                # 数据文件目录
+├── caches/                              # 缓存文件目录
+├── logs/                                # 日志文件目录
 │
-├── src/                             # 后端源代码目录
-│   ├── server.js                    # 主服务器文件
-│   ├── start.js                     # 智能启动脚本 (自动判断单进程/多进程)
+├── src/                                 # 后端源代码
+│   ├── server.js                        # 主服务器
+│   ├── start.js                         # 启动脚本
 │   ├── config/
-│   │   └── index.js                 # 配置文件
-│   ├── controllers/                 # 控制器目录
-│   │   ├── chat.js                  # 聊天控制器
-│   │   ├── chat.image.video.js      # 图片/视频生成控制器
-│   │   ├── cli.chat.js              # CLI聊天控制器
-│   │   └── models.js                # 模型控制器
-│   ├── middlewares/                 # 中间件目录
-│   │   ├── authorization.js         # 授权中间件
-│   │   └── chat-middleware.js       # 聊天中间件
-│   ├── models/                      # 模型目录
-│   │   └── models-map.js            # 模型映射配置
-│   ├── routes/                      # 路由目录
-│   │   ├── accounts.js              # 账户路由
-│   │   ├── chat.js                  # 聊天路由
-│   │   ├── cli.chat.js              # CLI聊天路由
-│   │   ├── models.js                # 模型路由
-│   │   ├── settings.js              # 设置路由
-│   │   └── verify.js                # 验证路由
-│   └── utils/                       # 工具函数目录
-│       ├── account-rotator.js       # 账户轮询器
-│       ├── account.js               # 账户管理
-│       ├── chat-helpers.js          # 聊天辅助函数
-│       ├── cli.manager.js           # CLI管理器
-│       ├── cookie-generator.js      # Cookie生成器
-│       ├── data-persistence.js      # 数据持久化
-│       ├── fingerprint.js           # 浏览器指纹生成
-│       ├── img-caches.js            # 图片缓存
-│       ├── logger.js                # 日志工具
-│       ├── precise-tokenizer.js     # 精确分词器
-│       ├── proxy-helper.js          # 代理辅助函数
-│       ├── redis.js                 # Redis连接
-│       ├── request.js               # HTTP请求封装
-│       ├── setting.js               # 设置管理
-│       ├── ssxmod-manager.js        # ssxmod参数管理
-│       ├── token-manager.js         # Token管理器
-│       ├── tools.js                 # 工具调用处理
-│       └── upload.js                # 文件上传
+│   │   └── index.js                     # 配置加载
+│   ├── controllers/
+│   │   ├── chat.js                      # 聊天控制器
+│   │   ├── chat.image.video.js          # 图片/视频控制器
+│   │   ├── anthropic.js                 # Anthropic 兼容控制器
+│   │   ├── anthropic.compatibility.js   # Anthropic 兼容辅助
+│   │   ├── cli.chat.js                  # CLI 聊天控制器
+│   │   └── models.js                    # 模型列表控制器
+│   ├── middlewares/
+│   │   ├── authorization.js             # 鉴权中间件
+│   │   └── chat-middleware.js           # 聊天请求预处理
+│   ├── models/
+│   │   └── models-map.js                # 模型映射
+│   ├── routes/
+│   │   ├── accounts.js                  # 账户管理路由
+│   │   ├── chat.js                      # 聊天路由
+│   │   ├── anthropic.js                 # Anthropic 兼容路由
+│   │   ├── cli.chat.js                  # CLI 路由
+│   │   ├── models.js                    # 模型路由
+│   │   ├── settings.js                  # 系统设置路由
+│   │   └── verify.js                    # 登录验证路由
+│   └── utils/
+│       ├── account.js                   # 账户管理
+│       ├── account-parser.js            # 账户解析
+│       ├── account-rotator.js           # 账户轮询
+│       ├── answer-extractor.js          # 思考/回答分离
+│       ├── chat-helpers.js              # 聊天辅助
+│       ├── cli-support.js              # CLI 支持
+│       ├── cli.manager.js              # CLI 管理器
+│       ├── cookie-generator.js          # Cookie 生成
+│       ├── data-persistence.js          # 数据持久化
+│       ├── fingerprint.js               # 浏览器指纹
+│       ├── img-caches.js                # 图片缓存
+│       ├── logger.js                    # 日志工具
+│       ├── precise-tokenizer.js         # 精确分词
+│       ├── proxy-helper.js              # 代理辅助
+│       ├── redis.js                     # Redis 连接
+│       ├── request.js                   # HTTP 请求封装
+│       ├── setting.js                   # 设置管理
+│       ├── ssxmod-manager.js            # ssxmod 参数管理
+│       ├── token-manager.js             # Token 管理器
+│       ├── tool-prompt.js               # 工具提示词
+│       ├── tools.js                     # Function Calling 处理
+│       └── upload.js                    # 文件上传
 │
-└── public/                          # 前端项目目录
-    ├── dist/                        # 编译后的前端文件
-    │   ├── assets/                  # 静态资源
-    │   ├── favicon.png
-    │   └── index.html
-    ├── src/                         # 前端源代码
-    │   ├── App.vue                  # 主应用组件
-    │   ├── main.js                  # 入口文件
-    │   ├── style.css                # 全局样式
-    │   ├── assets/                  # 静态资源
-    │   │   └── background.mp4
-    │   ├── routes/                  # 路由配置
-    │   │   └── index.js
-    │   └── views/                   # 页面组件
-    │       ├── auth.vue             # 认证页面
-    │       ├── dashboard.vue        # 仪表板页面
-    │       └── settings.vue         # 设置页面
-    ├── package.json                 # 前端依赖配置
-    ├── package-lock.json
-    ├── index.html                   # 前端入口HTML
-    ├── postcss.config.js            # PostCSS配置
-    ├── tailwind.config.js           # TailwindCSS配置
-    ├── vite.config.js               # Vite构建配置
-    └── public/                      # 公共静态资源
-        └── favicon.png
+└── public/                              # 前端项目
+    ├── index.html                       # 入口 HTML
+    ├── package.json                     # 前端依赖配置
+    └── src/
+        ├── App.vue                      # 根组件
+        ├── main.js                      # 入口文件
+        ├── style.css                    # 全局样式
+        ├── assets/
+        │   └── background.mp4
+        ├── components/
+        │   ├── LangSwitcher.vue         # 语言切换组件
+        │   ├── StatsAccountCard.vue     # 统计账号卡片
+        │   ├── StatsBarChart.vue        # 统计柱状图
+        │   ├── StatsTotals.vue          # 统计汇总
+        │   └── SvgSparkline.vue         # SVG 迷你图
+        ├── layouts/
+        │   └── AdminLayout.vue          # 管理后台布局
+        ├── locales/
+        │   ├── zh.json                  # 中文翻译
+        │   ├── en.json                  # 英文翻译
+        │   └── ru.json                  # 俄文翻译
+        ├── routes/
+        │   └── index.js                 # 路由配置
+        └── views/
+            ├── auth.vue                 # 登录页
+            ├── chat.vue                 # 测试会话页
+            ├── dashboard.vue            # 账号管理页
+            ├── settings.vue             # 系统设置页
+            └── statistics.vue           # 统计页
 ```
 
 ## 📖 API 文档
@@ -450,6 +415,10 @@ Qwen2API/
 本API支持多密钥认证机制，所有API请求都需要在请求头中包含有效的API密钥：
 
 ```http
+# 管理接口（/api/*）
+Authorization: Bearer admin-key
+
+# 下游 API 接口（/v1/*）
 Authorization: Bearer sk-your-api-key
 ```
 
