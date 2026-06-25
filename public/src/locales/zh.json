@@ -160,7 +160,12 @@
     "adminKeyTitle": "🔑 管理员密钥",
     "adminKeyHint": "用于 Web 后台登录，修改后需重新登录",
     "adminKeyInput": "输入新的管理员密钥",
-    "adminKeySave": "保存管理员密钥"
+    "adminKeySave": "保存管理员密钥",
+    "chatStreamTitle": "会话流式输出",
+    "chatStreamDesc": "设置测试会话默认使用流式还是非流式响应。",
+    "chatStreamHint": "系统设置保存的是默认值，测试会话页可临时覆盖本次会话。",
+    "chatStreamOn": "默认启用流式响应：边生成边显示，交互更快。",
+    "chatStreamOff": "默认关闭流式响应：等待完整结果后一次性显示。"
   },
   "smsg": {
     "apiKeySaved": "API Key保存成功",
@@ -185,7 +190,9 @@
     "keyDeleteFailed": "API Key删除失败: ",
     "adminKeySaved": "管理员密钥已更新，当前会话立即生效；如果 .env 设置了 ADMIN_KEY，重启后将以 .env 为准",
     "adminKeyFailed": "管理员密钥更新失败：",
-    "adminKeyRequired": "请输入新的管理员密钥"
+    "adminKeyRequired": "请输入新的管理员密钥",
+    "chatStreamSaved": "会话流式设置保存成功",
+    "chatStreamFailed": "会话流式设置保存失败："
   },
   "lang": {
     "label": "🌐 语言 / Language",
@@ -221,6 +228,8 @@
   },
   "chat": {
     "title": "测试 ChatCompletion API",
-    "send": "发送"
+    "send": "发送",
+    "streamTemp": "本次流式",
+    "nonStreamTemp": "本次非流式"
   }
 }

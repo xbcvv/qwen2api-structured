@@ -32,11 +32,10 @@
                 {{ opt.label }}
               </option>
             </select>
-            <!-- 流式开关 -->
             <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer select-none border rounded px-3 py-2 bg-transparent"
-              :class="state.stream ? 'border-blue-400 text-blue-700' : 'border-gray-300 text-gray-600'">
-              <input type="checkbox" v-model="state.stream" class="accent-blue-500 w-4 h-4" />
-              {{ state.stream ? 'Stream' : 'Non-Stream' }}
+              :class="state.stream ? 'border-[#b86b3b] text-[#9f5930]' : 'border-gray-300 text-gray-600'">
+              <input type="checkbox" v-model="state.stream" class="accent-[#b86b3b] w-4 h-4" />
+              {{ state.stream ? t('chat.streamTemp') : t('chat.nonStreamTemp') }}
             </label>
           </div>
           <div class="flex items-center gap-2">
@@ -62,6 +61,7 @@
 <script setup>
 import { reactive, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
+import axios from 'axios';
 
 defineOptions({
   name: "Chat",
@@ -260,16 +260,24 @@ function abort() {
 /* ===================== Init ===================== */
 
 onMounted(async function () {
-  const res = await fetch("/v1/models", {
-    method: "GET",
-    headers: { [tokenKey]: token },
-  });
-  const { data } = await res.json();
+  const [modelsRes, settingsRes] = await Promise.all([
+    fetch("/v1/models", {
+      method: "GET",
+      headers: { [tokenKey]: token },
+    }),
+    axios.get('/api/settings', {
+      headers: { Authorization: token },
+    }).catch(() => null)
+  ])
+  const { data } = await modelsRes.json();
   state.model = data[0]?.id || "";
   state.models = (data || []).map((item) => ({
     label: item.name || item.id,
     value: item.id,
   }));
+  if (settingsRes?.data?.chatStreamDefault !== undefined) {
+    state.stream = settingsRes.data.chatStreamDefault;
+  }
 });
 </script>
 

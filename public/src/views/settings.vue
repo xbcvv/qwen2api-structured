@@ -145,6 +145,39 @@
                                 class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
+                    <!-- 会话流式默认设置 -->
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 border border-[#e6ddd0] bg-[#fbfaf7]">
+                        <div class="absolute inset-0 bg-gradient-to-br from-[#fffaf2]/80 to-white/60 rounded-2xl"></div>
+                        <div class="relative flex flex-col gap-4">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <label class="text-gray-800 font-semibold">{{ t('settings.chatStreamTitle') }}</label>
+                                    <p class="text-sm text-gray-500 mt-1">{{ t('settings.chatStreamDesc') }}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="settings.chatStreamDefault = !settings.chatStreamDefault"
+                                    :class="[
+                                        'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none',
+                                        settings.chatStreamDefault ? 'bg-[#b86b3b]' : 'bg-gray-300'
+                                    ]"
+                                >
+                                    <span
+                                        :class="[
+                                            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200',
+                                            settings.chatStreamDefault ? 'translate-x-5' : 'translate-x-0'
+                                        ]"
+                                    ></span>
+                                </button>
+                            </div>
+                            <div class="rounded-xl border border-[#eadfce] bg-white/70 px-4 py-3 text-sm text-gray-600">
+                                {{ settings.chatStreamDefault ? t('settings.chatStreamOn') : t('settings.chatStreamOff') }}
+                            </div>
+                            <span class="text-xs text-gray-500">{{ t('settings.chatStreamHint') }}</span>
+                            <button @click="saveChatStream"
+                                class="w-full mt-1 bg-[#b86b3b] text-white rounded-lg py-2 hover:bg-[#9f5930] border border-[#b86b3b] transition-all duration-300">{{ t('settings.save') }}</button>
+                        </div>
+                    </div>
                     <!-- 聊天请求 retry 配置 -->
                     <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
                         <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
@@ -208,6 +241,7 @@ const settings = ref({
     outThink: false,
     searchInfoMode: 'table',
     simpleModelMap: false,
+    chatStreamDefault: true,
     chatRetryCount: 1,
     chatRetryBackoffMs: 400
 })
@@ -234,6 +268,7 @@ const loadSettings = async () => {
         settings.value.outThink = res.data.outThink
         settings.value.searchInfoMode = res.data.searchInfoMode
         settings.value.simpleModelMap = res.data.simpleModelMap
+        if (res.data.chatStreamDefault !== undefined) settings.value.chatStreamDefault = res.data.chatStreamDefault
         if (res.data.chatRetryCount !== undefined) settings.value.chatRetryCount = res.data.chatRetryCount
         if (res.data.chatRetryBackoffMs !== undefined) settings.value.chatRetryBackoffMs = res.data.chatRetryBackoffMs
     } catch (error) {
@@ -304,6 +339,16 @@ const saveSimpleModelMap = async () => {
         alert(t('smsg.simpleMapSaved'))
     } catch (error) {
         alert(t('smsg.simpleMapFailed') + error.message)
+    }
+}
+const saveChatStream = async () => {
+    try {
+        await axios.post('/api/setChatStream', { chatStreamDefault: settings.value.chatStreamDefault }, {
+            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
+        })
+        alert(t('smsg.chatStreamSaved'))
+    } catch (error) {
+        alert(t('smsg.chatStreamFailed') + (error.response?.data?.error || error.message))
     }
 }
 const saveRetryConfig = async () => {

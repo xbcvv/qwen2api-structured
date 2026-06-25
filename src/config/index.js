@@ -51,7 +51,8 @@ const config = {
     proxyUrl: process.env.PROXY_URL || null,
     // chat 请求重试配置（运行时可被 web UI 覆盖，见 src/utils/data-persistence.js#loadSettings）
     chatRetryCount: Math.max(0, parseInt(process.env.CHAT_RETRY_COUNT, 10) || 1),
-    chatRetryBackoffMs: Math.max(0, parseInt(process.env.CHAT_RETRY_BACKOFF_MS, 10) || 400)
+    chatRetryBackoffMs: Math.max(0, parseInt(process.env.CHAT_RETRY_BACKOFF_MS, 10) || 400),
+    chatStreamDefault: process.env.CHAT_STREAM_DEFAULT === 'false' ? false : true
 }
 
 module.exports = config

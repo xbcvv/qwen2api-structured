@@ -164,7 +164,12 @@
     "adminKeyTitle": "🔑 Admin Key",
     "adminKeyHint": "Used for web admin login. Re-login required after change.",
     "adminKeyInput": "Enter new admin key",
-    "adminKeySave": "Save Admin Key"
+    "adminKeySave": "Save Admin Key",
+    "chatStreamTitle": "Chat Stream Output",
+    "chatStreamDesc": "Set the default response mode for the test chat page.",
+    "chatStreamHint": "System settings save the default value. The test chat page can temporarily override it for the current session.",
+    "chatStreamOn": "Streaming enabled by default: tokens are displayed as they arrive.",
+    "chatStreamOff": "Streaming disabled by default: full response is shown after completion."
   },
   "smsg": {
     "apiKeyFailed": "API Key saving failed:",
@@ -189,7 +194,9 @@
     "thinkSaved": "Think output settings saved successfully",
     "adminKeySaved": "Admin key updated for the current session. If ADMIN_KEY is set in .env, it will take precedence after restart.",
     "adminKeyFailed": "Admin key update failed: ",
-    "adminKeyRequired": "Please enter a new admin key"
+    "adminKeyRequired": "Please enter a new admin key",
+    "chatStreamSaved": "Chat stream setting saved successfully",
+    "chatStreamFailed": "Failed to save chat stream setting: "
   },
   "stats": {
     "account": {
@@ -221,6 +228,8 @@
   },
   "chat": {
     "send": "send",
-    "title": "Test the ChatCompletion API"
+    "title": "Test the ChatCompletion API",
+    "streamTemp": "Stream for this session",
+    "nonStreamTemp": "Non-stream for this session"
   }
 }

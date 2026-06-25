@@ -80,6 +80,9 @@ const applyPersistedSettings = async () => {
       const v = parseInt(persisted.chatRetryBackoffMs, 10)
       if (!isNaN(v) && v >= 0) config.chatRetryBackoffMs = v
     }
+    if (typeof persisted.chatStreamDefault === 'boolean') {
+      config.chatStreamDefault = persisted.chatStreamDefault
+    }
     // Restore persisted adminKey only when env does NOT explicitly set ADMIN_KEY.
     // This makes .env authoritative when you change it later.
     if (!(process.env.ADMIN_KEY || '').trim() && typeof persisted.adminKey === 'string' && persisted.adminKey.trim()) {

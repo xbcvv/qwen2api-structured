@@ -22,7 +22,8 @@ router.get('/settings', adminKeyVerify, async (req, res) => {
     searchInfoMode: config.searchInfoMode,
     simpleModelMap: config.simpleModelMap,
     chatRetryCount: config.chatRetryCount,
-    chatRetryBackoffMs: config.chatRetryBackoffMs
+    chatRetryBackoffMs: config.chatRetryBackoffMs,
+    chatStreamDefault: config.chatStreamDefault
   })
 })
 
@@ -221,6 +222,27 @@ router.post('/simple-model-map', adminKeyVerify, async (req, res) => {
     })
   } catch (error) {
     logger.error('更新简化模型映射设置失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/setChatStream', adminKeyVerify, async (req, res) => {
+  try {
+    const { chatStreamDefault } = req.body
+    if (typeof chatStreamDefault !== 'boolean') {
+      return res.status(400).json({ error: '无效的会话流式设置' })
+    }
+
+    config.chatStreamDefault = chatStreamDefault
+    const persisted = await dataPersistence.saveSettings({ chatStreamDefault })
+
+    res.json({
+      status: true,
+      message: '会话流式设置更新成功',
+      persisted
+    })
+  } catch (error) {
+    logger.error('更新会话流式设置失败', 'CONFIG', '', error)
     res.status(500).json({ error: error.message })
   }
 })
