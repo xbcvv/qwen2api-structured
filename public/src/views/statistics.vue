@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-scroll w-100vw h-100vh p-4 overflow-y-auto">
+  <div class="dashboard-scroll page-fill overflow-y-auto p-4">
     <div class="container mx-auto">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 px-4 space-y-4 md:space-y-0 pt-5">
         <div class="flex items-center gap-3">

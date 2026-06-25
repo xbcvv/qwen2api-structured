@@ -1,10 +1,10 @@
 <template>
-  <div class="chat h-screen flex flex-col items-center">
-    <div class="chat-header p-4 bg-white/60 w-full flex justify-between">
+  <div class="chat page-fill flex flex-col items-center overflow-hidden">
+    <div class="chat-header shrink-0 p-4 bg-white/60 w-full flex justify-between">
       <span>Qwen</span>
       <span>{{ t("chat.title") }}</span>
     </div>
-    <div class="chat-messages flex-auto overflow-y-auto max-w-5xl w-full">
+    <div class="chat-messages min-h-0 flex-1 overflow-y-auto max-w-5xl w-full">
       <div
         v-for="(message, index) in state.messages"
         :key="index"
@@ -15,7 +15,7 @@
         </div>
       </div>
     </div>
-    <div class="chat-input max-w-5xl w-full">
+    <div class="chat-input shrink-0 max-w-5xl w-full">
       <div class="rounded-xl border p-4 m-4 bg-white/60">
         <textarea
           class="w-full outline-none bg-transparent"

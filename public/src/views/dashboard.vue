@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="page-fill flex flex-col overflow-hidden">
     <div class="list-page-head">
       <div>
         <h1 style="font-size:1.2rem;font-weight:800;">{{ t('dash.title') }}</h1>
@@ -98,7 +98,7 @@
       </div>
 
       <!-- Token列表 -->
-      <div class="max-h-[calc(75vh)] overflow-y-auto pr-2 scrollbar-hidden">
+      <div class="min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-hidden">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
           <div v-for="token in displayedTokens"
                :key="token.email"
