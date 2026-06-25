@@ -6,22 +6,22 @@
         <p class="text-xs text-gray-500 mt-1">管理 Qwen 账号、代理、刷新与调用统计</p>
       </div>
       <div class="list-page-actions">
-        <button @click="showAddModal = true" class="primary">{{ t('dash.addAccount') }}</button>
-        <button @click="refreshAllAccounts" :disabled="isRefreshingAll" class="smallbtn">
+        <button @click="showAddModal = true" class="primary dash-action-btn">{{ t('dash.addAccount') }}</button>
+        <button @click="refreshAllAccounts" :disabled="isRefreshingAll" class="smallbtn dash-action-btn">
           {{ isRefreshingAll ? t('dash.refreshing') : t('dash.refreshAll') }}
         </button>
-        <button @click="forceRefreshAllAccounts" :disabled="isForceRefreshingAll" class="smallbtn">
+        <button @click="forceRefreshAllAccounts" :disabled="isForceRefreshingAll" class="smallbtn dash-action-btn">
           {{ isForceRefreshingAll ? t('dash.forceRefreshing') : t('dash.forceRefresh') }}
         </button>
-        <button @click="exportAccounts" class="smallbtn">{{ t('dash.export') }}</button>
+        <button @click="exportAccounts" class="smallbtn dash-action-btn">{{ t('dash.export') }}</button>
       </div>
     </div>
 
       <!-- 分页控制区 -->
-      <div class="flex justify-between items-center px-4 mb-4">
-        <div class="flex items-center space-x-2">
-          <span class="text-sm text-gray-600">{{ t('dash.perPage') }}</span>
-          <select v-model="pageSize" @change="changePageSize" class="rounded-lg border-gray-300 bg-white/50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300">
+      <div class="dash-toolbar px-4 mb-3">
+        <div class="dash-toolbar-left">
+          <span class="dash-toolbar-text whitespace-nowrap">{{ t('dash.perPage') }}</span>
+          <select v-model="pageSize" @change="changePageSize" class="dash-select">
             <option :value="10">10</option>
             <option :value="20">20</option>
             <option :value="50">50</option>
@@ -29,24 +29,24 @@
             <option :value="200">200</option>
           </select>
         </div>
-        <div class="flex space-x-2 items-center">
-          <span class="text-sm text-gray-600">{{ t('dash.totalItems', { n: totalItems }) }}</span>
+        <div class="dash-toolbar-right">
+          <span class="dash-toolbar-text whitespace-nowrap">{{ t('dash.totalItems', { n: totalItems }) }}</span>
           <button
             @click="changePage(currentPage - 1)"
             :disabled="currentPage === 1"
             :class="[
-              'px-3 py-1 rounded-lg transition-all duration-300',
+              'dash-page-btn',
               currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8]'
             ]"
           >
             {{ t('dash.prevPage') }}
           </button>
-          <span class="text-gray-700">{{ currentPage }}/{{ totalPages }}</span>
+          <span class="dash-toolbar-text whitespace-nowrap">{{ currentPage }}/{{ totalPages }}</span>
           <button
             @click="changePage(currentPage + 1)"
             :disabled="currentPage === totalPages || totalPages === 0"
             :class="[
-              'px-3 py-1 rounded-lg transition-all duration-300',
+              'dash-page-btn',
               currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8]'
             ]"
           >
@@ -56,28 +56,28 @@
       </div>
 
       <!-- 多选操作区 -->
-      <div class="flex justify-between items-center px-4 mb-4">
-        <div class="flex items-center space-x-3">
+      <div class="dash-toolbar px-4 mb-3">
+        <div class="dash-toolbar-left">
           <label class="inline-flex items-center cursor-pointer group">
             <div class="relative">
               <input type="checkbox"
                     v-model="selectAll"
                     @change="toggleSelectAll"
                     class="sr-only peer">
-              <div class="w-6 h-6 bg-white border-2 border-gray-300 rounded-lg peer-checked:bg-[#b56535] peer-checked:border-[#b56535] transition-all duration-300 flex items-center justify-center">
-                <svg v-show="selectAll" class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <div class="w-5 h-5 bg-white border border-gray-300 rounded-md peer-checked:bg-[#b56535] peer-checked:border-[#b56535] transition-all duration-300 flex items-center justify-center">
+                <svg v-show="selectAll" class="w-3.5 h-3.5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </div>
             </div>
-            <span class="ml-2 text-gray-700 group-hover:text-indigo-700 transition-colors duration-200">{{ t('dash.selectAll') }}</span>
+            <span class="ml-2 text-xs text-gray-600 group-hover:text-[#9f5930] transition-colors duration-200 whitespace-nowrap">{{ t('dash.selectAll') }}</span>
           </label>
           <button
             @click="deleteSelected"
             :disabled="selectedTokens.length === 0"
             :class="[
-              'px-4 py-1.5 rounded-lg transition-all duration-300 border flex items-center space-x-1',
-              selectedTokens.length === 0 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+              'dash-danger-btn',
+              selectedTokens.length === 0 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-[#fdf2f0] text-[#c04a3a] border-[#e8c4bc] hover:bg-[#fbe8e4]'
             ]"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -88,7 +88,7 @@
         </div>
         <button
           @click="showDeleteAllConfirm = true"
-          class="px-4 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 transition-all duration-300 flex items-center space-x-1"
+          class="dash-danger-btn border-[#e8c4bc] bg-[#fdf2f0] text-[#c04a3a] hover:bg-[#fbe8e4]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -99,10 +99,10 @@
 
       <!-- Token列表 -->
       <div class="min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 p-3">
           <div v-for="token in displayedTokens"
                :key="token.email"
-               class="token-card group relative overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-2xl pt-4"
+               class="token-card group relative overflow-hidden rounded-xl transition-all duration-300 hover:shadow-lg pt-3"
                :class="[
                  { 'ring-2 ring-[#b56535] ring-opacity-75': isSelected(token.email) },
                  { 'opacity-60 grayscale': isOnCooldown(token.email) }
@@ -113,63 +113,63 @@
                        :checked="isSelected(token.email)"
                        @change="toggleSelect(token.email)"
                        class="sr-only peer">
-                <div class="checkbox-icon w-6 h-6 bg-white/70 backdrop-blur-sm border-2 border-gray-300 rounded-lg peer-checked:bg-[#b56535] peer-checked:border-[#b56535] transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow">
-                  <svg v-show="isSelected(token.email)" class="w-4 h-4 text-white transform scale-0 peer-checked:scale-100 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <div class="checkbox-icon w-5 h-5 bg-white/80 backdrop-blur-sm border border-gray-300 rounded-md peer-checked:bg-[#b56535] peer-checked:border-[#b56535] transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow">
+                  <svg v-show="isSelected(token.email)" class="w-3.5 h-3.5 text-white transform scale-0 peer-checked:scale-100 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 </div>
               </label>
             </div>
-            <div class="absolute top-3 right-3 z-10 flex items-center gap-1 text-lg leading-none select-none"
+            <div class="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 text-sm leading-none select-none"
                  :title="getStatusTooltip(token.email)">
               <span>{{ getStatusEmoji(token.email) }}</span>
               <span v-if="isOnCooldown(token.email)"
-                    class="text-sm font-mono text-gray-700">{{ getCountdown(token.email) }}</span>
+                    class="text-xs font-mono text-gray-600">{{ getCountdown(token.email) }}</span>
             </div>
             <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30"></div>
-            <div class="relative p-4 flex flex-col gap-2">
-              <div class="flex flex-col space-y-3">
-                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
+            <div class="relative p-3 flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1">
+                <div class="dash-field-row">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">📧 Email:</span>
-                    <span class="font-medium whitespace-nowrap text-left">{{ token.email }}</span>
+                    <span class="dash-field-label">📧 Email:</span>
+                    <span class="dash-field-value">{{ token.email }}</span>
                   </div>
-                  <button @click="copyToClipboard(token.email)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(token.email)" class="dash-copy-btn">📋</button>
                 </div>
-                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
+                <div class="dash-field-row">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">🔑 Passwd:</span>
-                    <span class="font-medium whitespace-nowrap text-left">{{ token.password }}</span>
+                    <span class="dash-field-label">🔑 Passwd:</span>
+                    <span class="dash-field-value">{{ token.password }}</span>
                   </div>
-                  <button @click="copyToClipboard(token.password)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(token.password)" class="dash-copy-btn">📋</button>
                 </div>
-                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
+                <div class="dash-field-row">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">🔐 Token:</span>
-                    <span class="font-medium whitespace-nowrap text-left text-sm">{{ token.token }}</span>
+                    <span class="dash-field-label">🔐 Token:</span>
+                    <span class="dash-field-value">{{ token.token }}</span>
                   </div>
-                  <button @click="copyToClipboard(token.token)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(token.token)" class="dash-copy-btn">📋</button>
                 </div>
-                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
+                <div class="dash-field-row">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">⏰ Expire:</span>
-                    <span class="font-medium whitespace-nowrap text-left">{{ new Date(token.expires * 1000).toLocaleString() }}</span>
+                    <span class="dash-field-label">⏰ Expire:</span>
+                    <span class="dash-field-value">{{ new Date(token.expires * 1000).toLocaleString() }}</span>
                   </div>
-                  <button @click="copyToClipboard(new Date(token.expires * 1000).toLocaleString())" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(new Date(token.expires * 1000).toLocaleString())" class="dash-copy-btn">📋</button>
                 </div>
-                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
+                <div class="dash-field-row">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">🌐 Proxy:</span>
-                    <span class="font-medium whitespace-nowrap text-left text-sm" :title="token.proxy || ''">{{ token.proxy || '—' }}</span>
+                    <span class="dash-field-label">🌐 Proxy:</span>
+                    <span class="dash-field-value" :title="token.proxy || ''">{{ token.proxy || '—' }}</span>
                   </div>
-                  <button v-if="token.proxy" @click="copyToClipboard(token.proxy)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
+                  <button v-if="token.proxy" @click="copyToClipboard(token.proxy)" class="dash-copy-btn">📋</button>
                 </div>
               </div>
 
-              <div class="bg-[#fbfaf7] border border-[#eee9e2] rounded-lg px-3 py-2 text-xs space-y-1 transition-all">
+              <div class="bg-[#fbfaf7] border border-[#eee9e2] rounded-lg px-2.5 py-1.5 text-[11px] space-y-0.5 transition-all">
                 <div class="flex items-baseline justify-between gap-2">
                   <span class="text-gray-600">{{ t('dash.acct.chatToday') }}:</span>
-                  <span class="font-medium text-gray-800 text-xs md:text-sm">
+                  <span class="font-medium text-gray-800 text-[11px]">
                     <span :title="String(getAccountStats(token.email).chat.input)">{{ formatCompact(getAccountStats(token.email).chat.input) }}</span>
                     in /
                     <span :title="String(getAccountStats(token.email).chat.output)">{{ formatCompact(getAccountStats(token.email).chat.output) }}</span>
@@ -231,16 +231,16 @@
                 </transition>
               </div>
 
-              <div class="pt-2 mt-auto border-t border-[#eee9e2]">
-                <div class="flex flex-row gap-2">
+              <div class="pt-1.5 mt-auto border-t border-[#eee9e2]">
+                <div class="flex flex-row gap-1.5">
                   <button @click="openEditProxy(token)"
-                          class="flex-1 py-2 px-2 rounded-lg transition-all duration-300 bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8] border border-[#e0d0bc] text-xs md:text-sm">
+                          class="dash-card-btn bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8] border border-[#e0d0bc]">
                     {{ t('dash.editProxy') }}
                   </button>
                   <button @click="refreshToken(token.email)"
                           :disabled="refreshingTokens.includes(token.email)"
                           :class="[
-                            'flex-1 py-2 px-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-1 text-xs md:text-sm',
+                            'dash-card-btn flex items-center justify-center gap-1',
                             refreshingTokens.includes(token.email)
                               ? 'bg-green-400 text-white refreshing-button-green cursor-not-allowed'
                               : 'macaron-green-button text-green-600 hover:bg-green-100 border border-green-200'
@@ -255,7 +255,7 @@
                     <span v-else>{{ t('dash.refreshToken') }}</span>
                   </button>
                   <button @click="deleteToken(token.email)"
-                          class="flex-1 py-2 px-2 rounded-lg border border-[#e8c4bc] text-[#c04a3a] group-hover:bg-[#fdf2f0] transition-all duration-300 hover:bg-[#fbe8e4] text-xs md:text-sm">
+                          class="dash-card-btn border border-[#e8c4bc] text-[#c04a3a] group-hover:bg-[#fdf2f0] transition-all hover:bg-[#fbe8e4]">
                     {{ t('dash.deleteAccount') }}
                   </button>
                 </div>
@@ -1202,6 +1202,116 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="css" scoped>
+
+.dash-action-btn {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.dash-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dash-toolbar-left,
+.dash-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.dash-toolbar-text {
+  font-size: 12px;
+  color: #6b6258;
+  line-height: 1;
+}
+
+.dash-select {
+  height: 32px;
+  min-width: 72px;
+  border: 1px solid #ddd6cc;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 8px;
+  font-size: 12px;
+  outline: none;
+}
+.dash-select:focus { border-color: #b56535; }
+
+.dash-page-btn,
+.dash-danger-btn {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1;
+  transition: all .2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.dash-danger-btn { border-width: 1px; gap: 4px; }
+
+.dash-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 2px 4px;
+  border-radius: 8px;
+}
+
+.dash-field-label {
+  width: 72px;
+  flex: 0 0 72px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #776d61;
+  white-space: nowrap;
+}
+
+.dash-field-value {
+  font-size: 11px;
+  color: #2d2a24;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.dash-copy-btn {
+  position: absolute;
+  right: 4px;
+  opacity: 0;
+  transition: opacity .2s ease;
+  background: #e8d5b8;
+  border-radius: 6px;
+  padding: 2px 5px;
+  font-size: 11px;
+}
+.dash-copy-btn:hover { opacity: 1; background: #dbc5a0; }
+
+.dash-card-btn {
+  flex: 1;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1;
+  transition: all .2s ease;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .container {
     padding: 0;
