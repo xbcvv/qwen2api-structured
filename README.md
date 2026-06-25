@@ -92,6 +92,7 @@ Qwen-Proxy 是一个将 `https://chat.qwen.ai` 和 `Qwen Code / Qwen Cli` 转换
 - 支持智能搜索、深度思考等高级功能
 - 支持 CLI 端点，提供 256K 上下文和工具调用能力
 - 提供 Web 管理界面，方便配置和监控
+- 测试会话页支持自动渲染模型返回的图片 URL / Markdown 图片，不只显示裸链接
 - 批量添加账号支持实时进度展示，可在系统设置中调整登录并发数
 
 ### 🌐 账号级代理 / Per-account proxy

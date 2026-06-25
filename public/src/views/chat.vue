@@ -11,7 +11,19 @@
         :class="`chat-message m-4 flex flex-col role-${message.role}`"
       >
         <div class="message-content">
-          {{ message.content }}
+          <p v-if="getMessageText(message.content)" class="message-text">{{ getMessageText(message.content) }}</p>
+          <div v-if="getImageUrls(message.content).length" class="message-images">
+            <a
+              v-for="url in getImageUrls(message.content)"
+              :key="url"
+              :href="url"
+              target="_blank"
+              rel="noreferrer"
+              class="message-image-link"
+            >
+              <img :src="url" alt="generated image" class="message-image" loading="lazy" />
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -257,6 +269,43 @@ function abort() {
   abortController?.abort();
 }
 
+const markdownImageRe = /!\[[^\]]*\]\((https?:\/\/[^\s)]+|data:image\/[^\s)]+)\)/gi;
+const plainImageUrlRe = /(https?:\/\/[^\s)\]"'<>]+|data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/gi;
+const imageExtRe = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?|#|$)/i;
+
+function isImageUrl(url) {
+  return imageExtRe.test(url) || url.startsWith('data:image/');
+}
+
+function getImageUrls(content) {
+  if (!content) return [];
+  const urls = [];
+  const pushUrl = (url) => {
+    const cleanUrl = url.replace(/[.,;:!?]+$/, '');
+    if (isImageUrl(cleanUrl) && !urls.includes(cleanUrl)) {
+      urls.push(cleanUrl);
+    }
+  };
+
+  for (const match of content.matchAll(markdownImageRe)) {
+    pushUrl(match[1]);
+  }
+  for (const match of content.matchAll(plainImageUrlRe)) {
+    pushUrl(match[1]);
+  }
+
+  return urls;
+}
+
+function getMessageText(content) {
+  if (!content) return '';
+  let text = content.replace(markdownImageRe, '').trim();
+  getImageUrls(content).forEach((url) => {
+    text = text.replace(url, '').trim();
+  });
+  return text;
+}
+
 /* ===================== Init ===================== */
 
 onMounted(async function () {
@@ -287,10 +336,39 @@ onMounted(async function () {
 }
 
 .role-user .message-content {
-  @apply bg-blue-100 py-2 px-4 rounded-lg;
+  @apply bg-[#fff8f1] py-2 px-4 rounded-lg border border-[#eadfce];
 }
 
 .role-assistant .message-content {
+  white-space: normal;
+}
+
+.message-text {
   white-space: pre-wrap;
+}
+
+.message-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+  max-width: min(760px, 100%);
+}
+
+.message-image-link {
+  display: block;
+  border: 1px solid #e3ded6;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(45,42,36,.06);
+}
+
+.message-image {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  background: #f5f3ef;
 }
 </style>
