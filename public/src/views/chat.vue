@@ -69,7 +69,7 @@ defineOptions({
 
 const { t } = useI18n();
 
-const apiKey = localStorage.getItem("apiKey");
+const apiKey = localStorage.getItem("adminKey") || localStorage.getItem("apiKey");
 const typeKey = "Content-Type";
 const tokenKey = "Authorization";
 const token = `Bearer ${apiKey}`;

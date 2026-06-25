@@ -33,13 +33,14 @@ const apiKeyVerify = (req, res, next) => {
   }
 
   const cleanKey = apiKey.startsWith('Bearer ') ? apiKey.slice(7) : apiKey
+  const isAdmin = cleanKey === config.adminKey && !!config.adminKey
   const isDownstreamKey = config.apiKeys.includes(cleanKey)
 
-  if (!isDownstreamKey) {
+  if (!isAdmin && !isDownstreamKey) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  req.isAdmin = false
+  req.isAdmin = isAdmin
   req.apiKey = apiKey
   next()
 }
