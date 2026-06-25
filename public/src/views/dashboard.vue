@@ -21,13 +21,15 @@
       <div class="dash-toolbar px-4 mb-3">
         <div class="dash-toolbar-left">
           <span class="dash-toolbar-text whitespace-nowrap">{{ t('dash.perPage') }}</span>
-          <select v-model="pageSize" @change="changePageSize" class="dash-select">
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-            <option :value="100">100</option>
-            <option :value="200">200</option>
-          </select>
+          <input
+            v-model.number="pageSize"
+            @change="changePageSize"
+            @keyup.enter="changePageSize"
+            type="number"
+            min="1"
+            max="500"
+            class="dash-select w-20"
+          />
         </div>
         <div class="dash-toolbar-right">
           <span class="dash-toolbar-text whitespace-nowrap">{{ t('dash.totalItems', { n: totalItems }) }}</span>
@@ -545,7 +547,7 @@ const batchTaskNotified = ref(false)
 // 分页相关
 const displayedTokens = ref([])
 const currentPage = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(12)
 const totalItems = ref(0)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / pageSize.value)))
 const isLoading = ref(false)
@@ -911,6 +913,8 @@ const changePage = async (page) => {
 }
 
 const changePageSize = async () => {
+  const nextSize = Number(pageSize.value)
+  pageSize.value = Number.isFinite(nextSize) ? Math.min(500, Math.max(1, Math.floor(nextSize))) : 12
   currentPage.value = 1
   selectedTokens.value = []
   selectAll.value = false
