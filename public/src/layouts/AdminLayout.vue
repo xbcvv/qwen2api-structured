@@ -67,6 +67,7 @@ const navItems = [
   { path: '/', label: '账号管理', icon: '◎', section: '核心功能' },
   { path: '/chat', label: '测试会话', icon: '✦', section: '核心功能' },
   { path: '/statistics', label: '统计', icon: '▣', section: '监控' },
+  { path: '/request-logs', label: '请求日志', icon: '⇄', section: '监控' },,
   { path: '/settings', label: '系统设置', icon: '⚙', section: '系统' }
 ]
 

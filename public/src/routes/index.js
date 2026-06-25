@@ -28,6 +28,11 @@ const routes = [
         component: () => import('../views/statistics.vue')
       },
       {
+        name: 'requestLogs',
+        path: 'request-logs',
+        component: () => import('../views/request-logs.vue')
+      },
+      {
         name: 'chat',
         path: 'chat',
         component: () => import('../views/chat.vue')
@@ -41,7 +46,7 @@ const router = createRouter({
   routes
 })
 
-const requireAdmin = ['/', '/settings', '/statistics']
+const requireAdmin = ['/', '/settings', '/statistics', '/request-logs']
 
 router.beforeEach(async (to, from, next) => {
   if (to.path === '/auth') {

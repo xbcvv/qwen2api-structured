@@ -15,6 +15,8 @@ const anthropicRouter = require('./routes/anthropic.js')
 const verifyRouter = require('./routes/verify.js')
 const accountsRouter = require('./routes/accounts.js')
 const settingsRouter = require('./routes/settings.js')
+const requestLogsRouter = require('./routes/request-logs.js')
+const { requestLogMiddleware } = require('./utils/request-log')
 
 if (config.dataSaveMode === 'file') {
   if (!fs.existsSync(path.join(__dirname, '../data/data.json'))) {
@@ -28,6 +30,7 @@ initSsxmodManager()
 app.use(bodyParser.json({ limit: '128mb' }))
 app.use(bodyParser.urlencoded({ limit: '128mb', extended: true }))
 app.use(cors())
+app.use(requestLogMiddleware)
 
 // API路由
 app.use(modelsRouter)
@@ -37,6 +40,7 @@ app.use(anthropicRouter)
 app.use(verifyRouter)
 app.use('/api', accountsRouter)
 app.use('/api', settingsRouter)
+app.use('/api', requestLogsRouter)
 
 app.use(express.static(path.join(__dirname, '../public/dist')))
 
