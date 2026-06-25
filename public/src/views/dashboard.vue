@@ -2,8 +2,8 @@
   <div class="page-fill flex flex-col overflow-hidden">
     <div class="list-page-head">
       <div>
-        <h1 style="font-size:1.2rem;font-weight:800;">{{ t('dash.title') }}</h1>
-        <p style="font-size:.82rem;color:var(--fg-muted);margin-top:4px;">管理 Qwen 账号、代理、刷新与调用统计</p>
+        <h1 class="text-xl font-bold text-[#2d2a24]">{{ t('dash.title') }}</h1>
+        <p class="text-xs text-gray-500 mt-1">管理 Qwen 账号、代理、刷新与调用统计</p>
       </div>
       <div class="list-page-actions">
         <button @click="showAddModal = true" class="primary">{{ t('dash.addAccount') }}</button>
@@ -20,7 +20,7 @@
       <!-- 分页控制区 -->
       <div class="flex justify-between items-center px-4 mb-4">
         <div class="flex items-center space-x-2">
-          <span class="text-gray-700">{{ t('dash.perPage') }}</span>
+          <span class="text-sm text-gray-600">{{ t('dash.perPage') }}</span>
           <select v-model="pageSize" @change="changePageSize" class="rounded-lg border-gray-300 bg-white/50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300">
             <option :value="10">10</option>
             <option :value="20">20</option>
@@ -30,13 +30,13 @@
           </select>
         </div>
         <div class="flex space-x-2 items-center">
-          <span class="text-gray-700">{{ t('dash.totalItems', { n: totalItems }) }}</span>
+          <span class="text-sm text-gray-600">{{ t('dash.totalItems', { n: totalItems }) }}</span>
           <button
             @click="changePage(currentPage - 1)"
             :disabled="currentPage === 1"
             :class="[
               'px-3 py-1 rounded-lg transition-all duration-300',
-              currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8]'
             ]"
           >
             {{ t('dash.prevPage') }}
@@ -47,7 +47,7 @@
             :disabled="currentPage === totalPages || totalPages === 0"
             :class="[
               'px-3 py-1 rounded-lg transition-all duration-300',
-              currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8]'
             ]"
           >
             {{ t('dash.nextPage') }}
@@ -64,7 +64,7 @@
                     v-model="selectAll"
                     @change="toggleSelectAll"
                     class="sr-only peer">
-              <div class="w-6 h-6 bg-white border-2 border-gray-300 rounded-lg peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all duration-300 flex items-center justify-center">
+              <div class="w-6 h-6 bg-white border-2 border-gray-300 rounded-lg peer-checked:bg-[#b56535] peer-checked:border-[#b56535] transition-all duration-300 flex items-center justify-center">
                 <svg v-show="selectAll" class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
@@ -104,7 +104,7 @@
                :key="token.email"
                class="token-card group relative overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-2xl pt-4"
                :class="[
-                 { 'ring-2 ring-indigo-500 ring-opacity-75': isSelected(token.email) },
+                 { 'ring-2 ring-[#b56535] ring-opacity-75': isSelected(token.email) },
                  { 'opacity-60 grayscale': isOnCooldown(token.email) }
                ]">
             <div class="absolute top-3 left-3 z-10">
@@ -113,7 +113,7 @@
                        :checked="isSelected(token.email)"
                        @change="toggleSelect(token.email)"
                        class="sr-only peer">
-                <div class="checkbox-icon w-6 h-6 bg-white/70 backdrop-blur-sm border-2 border-gray-300 rounded-lg peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow">
+                <div class="checkbox-icon w-6 h-6 bg-white/70 backdrop-blur-sm border-2 border-gray-300 rounded-lg peer-checked:bg-[#b56535] peer-checked:border-[#b56535] transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow">
                   <svg v-show="isSelected(token.email)" class="w-4 h-4 text-white transform scale-0 peer-checked:scale-100 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
@@ -127,46 +127,46 @@
                     class="text-sm font-mono text-gray-700">{{ getCountdown(token.email) }}</span>
             </div>
             <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30"></div>
-            <div class="relative p-6 flex flex-col gap-4">
+            <div class="relative p-4 flex flex-col gap-2">
               <div class="flex flex-col space-y-3">
-                <div class="relative flex items-center bg-blue-50/80 rounded-lg px-2 py-1">
+                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-gray-700 min-w-[96px] text-left font-semibold">📧 Email:</span>
+                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">📧 Email:</span>
                     <span class="font-medium whitespace-nowrap text-left">{{ token.email }}</span>
                   </div>
-                  <button @click="copyToClipboard(token.email)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-blue-200 hover:bg-blue-300 rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(token.email)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
                 </div>
-                <div class="relative flex items-center bg-blue-50/80 rounded-lg px-2 py-1">
+                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-gray-700 min-w-[96px] text-left font-semibold">🔑 Passwd:</span>
+                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">🔑 Passwd:</span>
                     <span class="font-medium whitespace-nowrap text-left">{{ token.password }}</span>
                   </div>
-                  <button @click="copyToClipboard(token.password)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-blue-200 hover:bg-blue-300 rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(token.password)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
                 </div>
-                <div class="relative flex items-center bg-blue-50/80 rounded-lg px-2 py-1">
+                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-gray-700 min-w-[96px] text-left font-semibold">🔐 Token:</span>
+                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">🔐 Token:</span>
                     <span class="font-medium whitespace-nowrap text-left text-sm">{{ token.token }}</span>
                   </div>
-                  <button @click="copyToClipboard(token.token)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-blue-200 hover:bg-blue-300 rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(token.token)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
                 </div>
-                <div class="relative flex items-center bg-blue-50/80 rounded-lg px-2 py-1">
+                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-gray-700 min-w-[96px] text-left font-semibold">⏰ Expire:</span>
+                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">⏰ Expire:</span>
                     <span class="font-medium whitespace-nowrap text-left">{{ new Date(token.expires * 1000).toLocaleString() }}</span>
                   </div>
-                  <button @click="copyToClipboard(new Date(token.expires * 1000).toLocaleString())" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-blue-200 hover:bg-blue-300 rounded px-2 py-1 text-base">📋</button>
+                  <button @click="copyToClipboard(new Date(token.expires * 1000).toLocaleString())" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
                 </div>
-                <div class="relative flex items-center bg-blue-50/80 rounded-lg px-2 py-1">
+                <div class="flex items-center rounded-lg px-2 py-1 gap-2">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
-                    <span class="text-gray-700 min-w-[96px] text-left font-semibold">🌐 Proxy:</span>
+                    <span class="text-sm font-medium text-gray-600 w-20 shrink-0">🌐 Proxy:</span>
                     <span class="font-medium whitespace-nowrap text-left text-sm" :title="token.proxy || ''">{{ token.proxy || '—' }}</span>
                   </div>
-                  <button v-if="token.proxy" @click="copyToClipboard(token.proxy)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-blue-200 hover:bg-blue-300 rounded px-2 py-1 text-base">📋</button>
+                  <button v-if="token.proxy" @click="copyToClipboard(token.proxy)" class="absolute right-2 opacity-0 hover:opacity-100 transition-opacity bg-[#e8d5b8] hover:bg-[#dbc5a0] rounded px-2 py-1 text-base">📋</button>
                 </div>
               </div>
 
-              <div class="bg-white/40 backdrop-blur-sm border border-white/40 rounded-2xl px-4 py-3 text-sm space-y-1 transition-all">
+              <div class="bg-[#fbfaf7] border border-[#eee9e2] rounded-lg px-3 py-2 text-xs space-y-1 transition-all">
                 <div class="flex items-baseline justify-between gap-2">
                   <span class="text-gray-600">{{ t('dash.acct.chatToday') }}:</span>
                   <span class="font-medium text-gray-800 text-xs md:text-sm">
@@ -231,10 +231,10 @@
                 </transition>
               </div>
 
-              <div class="pt-4 mt-auto border-t border-gray-200/50">
+              <div class="pt-2 mt-auto border-t border-[#eee9e2]">
                 <div class="flex flex-row gap-2">
                   <button @click="openEditProxy(token)"
-                          class="flex-1 py-2 px-2 rounded-lg transition-all duration-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs md:text-sm">
+                          class="flex-1 py-2 px-2 rounded-lg transition-all duration-300 bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8] border border-[#e0d0bc] text-xs md:text-sm">
                     {{ t('dash.editProxy') }}
                   </button>
                   <button @click="refreshToken(token.email)"
@@ -255,7 +255,7 @@
                     <span v-else>{{ t('dash.refreshToken') }}</span>
                   </button>
                   <button @click="deleteToken(token.email)"
-                          class="flex-1 py-2 px-2 rounded-lg border border-red-200 text-red-600 group-hover:bg-red-50 transition-all duration-300 hover:bg-red-100 text-xs md:text-sm">
+                          class="flex-1 py-2 px-2 rounded-lg border border-[#e8c4bc] text-[#c04a3a] group-hover:bg-[#fdf2f0] transition-all duration-300 hover:bg-[#fbe8e4] text-xs md:text-sm">
                     {{ t('dash.deleteAccount') }}
                   </button>
                 </div>
@@ -271,7 +271,7 @@
          class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
          @click.self="showDeleteAllConfirm = false">
       <div class="relative bg-white/90 backdrop-blur-lg rounded-2xl p-6 w-11/12 max-w-md transform transition-all duration-300 scale-100 opacity-100">
-        <h2 class="text-2xl font-bold text-red-600 mb-4">{{ t('dash.dangerTitle') }}</h2>
+        <h2 class="text-lg font-bold text-red-600 mb-3">{{ t('dash.dangerTitle') }}</h2>
         <p class="text-gray-700 mb-6">{{ t('dash.dangerText', { n: totalItems }) }}</p>
         <div class="flex justify-end space-x-4">
           <button @click="showDeleteAllConfirm = false"
@@ -301,17 +301,17 @@
         <div class="modal-scroll min-h-0 flex-1 overflow-y-auto pr-2">
         <transition name="fade" mode="out-in">
           <div v-if="addMode==='single'" key="single" class="pr-1">
-            <h2 class="text-xl font-bold mb-4">{{ t('dash.addTitle') }}</h2>
+            <h2 class="text-base font-bold text-[#2d2a24] mb-3">{{ t('dash.addTitle') }}</h2>
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700">Email</label>
                 <input v-model="newAccount.email" type="email"
-                       class="mt-1 block w-full rounded-xl border-gray-300 bg-white/50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                       class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-10 text-sm px-3">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700">Password</label>
                 <input v-model="newAccount.password" type="password"
-                       class="mt-1 block w-full rounded-xl border-gray-300 bg-white/50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                       class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-10 text-sm px-3">
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700">{{ t('dash.proxyLabel') }}</label>
@@ -338,7 +338,7 @@
             </div>
           </div>
           <div v-else key="batch" class="pr-1">
-            <h2 class="text-xl font-bold mb-4 px-4">{{ t('dash.batchTitle') }}</h2>
+            <h2 class="text-base font-bold text-[#2d2a24] mb-3 px-4">{{ t('dash.batchTitle') }}</h2>
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 px-4 pb-2">{{ t('dash.batchLabel') }}</label>
@@ -443,7 +443,7 @@
          class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
          @click.self="closeEditProxyModal">
       <div class="relative bg-white/90 backdrop-blur-lg rounded-2xl p-6 w-11/12 max-w-md transform transition-all duration-300 scale-100 opacity-100">
-        <h2 class="text-xl font-bold mb-2">{{ t('dash.editProxyTitle') }}</h2>
+        <h2 class="text-base font-bold text-[#2d2a24] mb-2">{{ t('dash.editProxyTitle') }}</h2>
         <p class="text-sm text-gray-600 mb-4">{{ t('dash.editProxyHint') }}</p>
         <div class="space-y-4">
           <div>
