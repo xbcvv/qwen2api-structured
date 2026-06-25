@@ -3,11 +3,10 @@ import { createI18n } from 'vue-i18n'
 import router from './routes/index.js'
 import App from './App.vue'
 import en from './locales/en.json'
-import ru from './locales/ru.json'
 import zh from './locales/zh.json'
 import "./style.css"
 
-const messages = { zh, en, ru },
+const messages = { zh, en },
   fallbackLocale = 'zh'
 
 const detectLocale = () => {

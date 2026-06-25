@@ -4,15 +4,44 @@
   </div>
   <div class="flex flex-col items-center justify-center w-screen h-screen">
     <transition name="fade-slide">
-      <div
-        class="flex flex-col items-center w-4/5 h-1/2 bg-opacity-50 bg-white rounded-3xl shadow-xl border-2 border-gray-200 animate-panel"
-        v-if="showPanel">
-        <h1 class="block mt-24 mb-10 text-2xl font-bold">{{ t('auth.title') }}</h1>
-        <input type="text"
-          class="w-4/5 h-16 rounded-2xl bg-opacity-80 bg-white border-2 border-gray-100 pl-10 placeholder:text-gray-500 focus:shadow-lg focus:scale-105 transition-all duration-300"
-          :placeholder="t('auth.placeholder')" v-model="apiKey" @keyup.enter="handleLogin">
-        <button class="mt-10 w-4/5 h-16 rounded-2xl bg-opacity-65 border-2 border-black bg-black text-white transition-transform duration-200 active:scale-95 hover:scale-105"
-          @click="handleLogin">{{ t('auth.login') }}</button>
+      <div v-if="showPanel"
+        class="flex flex-col items-center w-96 p-8 bg-white rounded-3xl shadow-xl border border-gray-200 animate-panel">
+        <h1 class="mb-8 text-2xl font-bold">{{ t('auth.title') }}</h1>
+
+        <label class="self-start mb-2 text-gray-700" for="adminKey">
+          {{ t('auth.passwordLabel') }}
+        </label>
+        <div class="relative w-full mb-6">
+          <input
+            id="adminKey"
+            :type="passwordVisible ? 'text' : 'password'"
+            v-model="apiKey"
+            :placeholder="t('auth.placeholder')"
+            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            @keyup.enter="handleLogin"
+          />
+          <button
+            class="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            @click="passwordVisible = !passwordVisible"
+            type="button"
+            tabindex="-1"
+          >
+            <svg v-if="passwordVisible" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+
+        <button
+          class="w-full py-3 text-white bg-indigo-700 rounded-lg hover:bg-indigo-800 active:scale-95 transition-transform duration-200"
+          @click="handleLogin"
+        >
+          {{ t('auth.login') }}
+        </button>
       </div>
     </transition>
   </div>
@@ -29,6 +58,7 @@ const { t } = useI18n()
 const router = useRouter()
 const apiKey = ref('')
 const showPanel = ref(false)
+const passwordVisible = ref(false)
 
 const handleLogin = async () => {
   try {

@@ -1,10 +1,11 @@
 {
   "auth": {
-    "error": "apiKey verification failed, please re-enter!",
-    "login": "Log in",
-    "placeholder": "Please enter the administrator account",
-    "title": "Administrator authentication",
-    "notAdmin": "This key is not an admin key, cannot log in to admin panel"
+    "title": "Login to Qwen2API",
+    "passwordLabel": "Administrator Authentication",
+    "placeholder": "Please enter administrator verification",
+    "login": "Sign In",
+    "error": "Verification failed, please try again.",
+    "notAdmin": "This key is not an admin key. Admin panel access denied."
   },
   "dash": {
     "acct": {
@@ -86,8 +87,7 @@
     "chat": "test session"
   },
   "lang": {
-    "label": "🌐 Language / Language",
-    "ru": "Русский",
+    "label": "🌐 Language / 语言",
     "zh": "Chinese"
   },
   "msg": {

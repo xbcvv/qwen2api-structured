@@ -1,9 +1,10 @@
 {
   "auth": {
-    "title": "管理员身份验证",
-    "placeholder": "请输入管理员账号",
+    "title": "登录到 Qwen2API",
+    "passwordLabel": "管理员身份验证",
+    "placeholder": "请输入管理员身份验证信息",
     "login": "登录",
-    "error": "apiKey 校验失败,请重新输入!",
+    "error": "验证失败，请重新输入！",
     "notAdmin": "此密钥不是管理员密钥，无法登录管理后台"
   },
   "dash": {
@@ -188,7 +189,6 @@
   },
   "lang": {
     "label": "🌐 语言 / Language",
-    "ru": "Русский",
     "zh": "中文"
   },
   "stats": {
