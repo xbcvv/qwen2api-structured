@@ -229,7 +229,6 @@
   "chat": {
     "send": "send",
     "title": "Test the ChatCompletion API",
-    "streamTemp": "Stream for this session",
-    "nonStreamTemp": "Non-stream for this session"
+    "streamLabel": "Stream"
   }
 }

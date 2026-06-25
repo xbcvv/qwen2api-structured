@@ -3,22 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f7f8fb;
-  --bg-sub: #f1f3f7;
-  --fg: #171923;
-  --fg-light: #4a5568;
-  --fg-muted: #6b7280;
+  --bg: #f5f3ef;
+  --bg-sub: #efede8;
+  --fg: #2d2a24;
+  --fg-light: #5a5248;
+  --fg-muted: #8a8072;
   --card-bg: #fff;
-  --card-border: #e5e7eb;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-light: rgba(79,70,229,.08);
-  --orange: #c97338;
-  --orange-light: rgba(201,115,56,.08);
-  --success: #16a34a;
+  --card-border: #e3ded6;
+  --primary: #b56535;
+  --primary-hover: #9f532d;
+  --primary-light: rgba(181,101,53,.08);
+  --orange: #b56535;
+  --orange-light: rgba(181,101,53,.08);
+  --success: #7a9e6b;
   --success-light: rgba(22,163,74,.1);
-  --danger: #ef4444;
-  --danger-light: rgba(239,68,68,.08);
+  --danger: #c04a3a;
+  --danger-light: rgba(192,74,58,.08);
   --warning: #b45309;
   --warning-light: rgba(180,8,9,.06);
   --shadow-xs: 0 1px 2px rgba(15,23,42,.04);
@@ -59,7 +59,7 @@ input, textarea, select { font-family: inherit; }
 /* ===== Sidebar ===== */
 .sidebar {
   width: var(--sidebar-w);
-  background: #171923;
+  background: #2d2a24;
   color: #cbd5e1;
   position: fixed;
   inset: 0 auto 0 0;
@@ -80,7 +80,7 @@ input, textarea, select { font-family: inherit; }
 .brand-mark {
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
+  background: linear-gradient(135deg, #b56535, #d4875a);
   color: #fff;
   border-radius: 9px;
   display: inline-flex;

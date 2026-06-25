@@ -1,6 +1,6 @@
 <template>
   <div class="chat page-fill flex flex-col items-center overflow-hidden">
-    <div class="chat-header shrink-0 p-4 bg-white/60 w-full flex justify-between">
+    <div class="chat-header shrink-0 p-4 bg-[#f7f6f3] border-b border-[#e3ded6] w-full flex justify-between text-sm text-gray-700">
       <span>Qwen</span>
       <span>{{ t("chat.title") }}</span>
     </div>
@@ -16,26 +16,26 @@
       </div>
     </div>
     <div class="chat-input shrink-0 max-w-5xl w-full">
-      <div class="rounded-xl border p-4 m-4 bg-white/60">
+      <div class="rounded-2xl border border-[#ddd6cc] p-4 m-4 bg-white shadow-sm">
         <textarea
-          class="w-full outline-none bg-transparent"
+          class="w-full outline-none bg-transparent min-h-[88px] resize-none text-sm"
           v-model="state.prompt"
           @keydown.enter.exact.prevent="send"
         ></textarea>
         <div class="flex justify-between items-center mt-2 gap-2 flex-wrap">
           <div class="flex items-center gap-2">
             <select
-              class="border rounded py-2 outline-none bg-transparent text-sm"
+              class="border border-[#ddd6cc] rounded-lg px-3 py-2 outline-none bg-white text-sm focus:border-[#b56535]"
               v-model="state.model"
             >
               <option v-for="opt in state.models" :key="opt.value" :value="opt.value">
                 {{ opt.label }}
               </option>
             </select>
-            <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer select-none border rounded px-3 py-2 bg-transparent"
-              :class="state.stream ? 'border-[#b86b3b] text-[#9f5930]' : 'border-gray-300 text-gray-600'">
-              <input type="checkbox" v-model="state.stream" class="accent-[#b86b3b] w-4 h-4" />
-              {{ state.stream ? t('chat.streamTemp') : t('chat.nonStreamTemp') }}
+            <label class="inline-flex items-center justify-center gap-1.5 text-sm cursor-pointer select-none border rounded-lg px-3 py-2 bg-white whitespace-nowrap min-w-[72px]"
+              :class="state.stream ? 'border-[#b56535] text-[#9f5930] bg-[#fff8f1]' : 'border-gray-300 text-gray-600'">
+              <input type="checkbox" v-model="state.stream" class="accent-[#b56535] w-4 h-4 shrink-0" />
+              <span class="whitespace-nowrap leading-none">{{ t('chat.streamLabel') }}</span>
             </label>
           </div>
           <div class="flex items-center gap-2">
@@ -45,7 +45,7 @@
               ■ {{ t("chat.stop") || 'Stop' }}
             </button>
             <button
-              class="bg-blue-500 text-white px-4 py-2 rounded-full text-sm disabled:opacity-50"
+              class="bg-[#b56535] text-white px-4 py-2 rounded-full text-sm disabled:opacity-50 hover:bg-[#9f532d]"
               :disabled="state.streaming || !state.prompt.trim()"
               @click="send"
             >

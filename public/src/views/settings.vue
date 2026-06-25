@@ -2,10 +2,10 @@
     <div class="page-fill overflow-y-auto p-4">
         <div class="container mx-auto">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6 px-4 space-y-4 md:space-y-0 pt-5">
-                <h1 class="text-3xl font-bold">{{ t('settings.title') }}</h1>
+                <h1 class="text-2xl font-bold text-[#2d2a24]">{{ t('settings.title') }}</h1>
                 <div class="flex items-center space-x-3">
                     <router-link to="/"
-                        class="action-button font-bold border border-blue-200 bg-blue-50 text-blue-900 px-4 py-2 rounded-xl shadow-sm hover:bg-blue-100 hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center">
+                        class="action-button font-bold border border-[#c8b9a8] bg-[#f5f0e8] text-[#7a5e3f] px-4 py-2 rounded-xl shadow-sm hover:bg-[#ede5d8] hover:border-[#b56535] transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 text-center text-sm">
                         {{ t('settings.backToDash') }}
                     </router-link>
                     <LangSwitcher />
@@ -13,15 +13,15 @@
             </div>
             <div class="grid grid-cols-1 gap-6 p-4">
                 <!-- API Key 管理 -->
-                <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                    <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl"></div>
+                <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                    <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl"></div>
                     <div class="relative flex flex-col gap-4">
                         <label class="text-gray-700 font-semibold text-lg">{{ t('settings.apiKeyTitle') }}</label>
 
                         <!-- 管理员密钥修改 -->
-                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div class="bg-[#fef9f1] border border-[#e8d5b0] rounded-lg p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="text-yellow-600 font-semibold">{{ t('settings.adminKeyTitle') }}</span>
+                                <span class="text-[#9a6020] font-semibold">{{ t('settings.adminKeyTitle') }}</span>
                                 <span v-if="settings.adminKeySet" class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">{{ t('settings.adminKeySet') }}</span>
                                 <span v-else class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">{{ t('settings.adminKeyUnset') }}</span>
                             </div>
@@ -33,7 +33,7 @@
                                     :placeholder="t('settings.adminKeyInput')"
                                     class="flex-1 rounded-lg border-gray-300 bg-white shadow-sm h-8 text-sm px-3">
                                 <button @click="saveAdminKey"
-                                    class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-yellow-600 transition-all">
+                                    class="bg-[#b56535] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#9f532d] transition-all">
                                     {{ t('settings.adminKeySave') }}
                                 </button>
                             </div>
@@ -44,7 +44,7 @@
                             <div class="flex items-center justify-between">
                                 <span class="text-gray-700 font-semibold">{{ t('settings.regularKeys') }}</span>
                                 <button @click="showAddKeyModal = true"
-                                    class="bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600 transition-all">
+                                    class="bg-[#5f8a4b] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#4d7339] transition-all">
                                     {{ t('settings.addKey') }}
                                 </button>
                             </div>
@@ -58,7 +58,7 @@
                                 <input :value="key" type="text" readonly
                                     class="flex-1 rounded-lg border-gray-300 bg-white shadow-sm h-8 text-sm px-3">
                                 <button @click="deleteRegularKey(index)"
-                                    class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600 transition-all">
+                                    class="bg-[#c04a3a] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#a83c2e] transition-all">
                                     {{ t('settings.delete') }}
                                 </button>
                             </div>
@@ -69,80 +69,80 @@
                 <!-- 其他设置项 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- 自动刷新 -->
-                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                        <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
                         </div>
                         <div class="relative flex flex-col gap-2">
                             <label class="text-gray-700 font-semibold">{{ t('settings.autoRefresh') }}</label>
                             <div class="flex items-center gap-2">
                                 <input v-model="settings.autoRefresh" type="checkbox"
-                                    class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    class="h-5 w-5 rounded border-[#c8b9a8] accent-[#b56535]">
                                 <span>{{ t('settings.enableAutoRefresh') }}</span>
                             </div>
                             <label class="text-gray-700">{{ t('settings.refreshInterval') }}</label>
                             <input v-model.number="settings.autoRefreshInterval" type="number"
-                                class="mt-1 block w-full rounded-xl border-gray-300 bg-white/60 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                                class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-12 text-base px-4">
                             <button @click="saveAutoRefresh"
-                                class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
                     <!-- 批量登录并发数 -->
-                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                        <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
                         </div>
                         <div class="relative flex flex-col gap-2">
                             <label class="text-gray-700 font-semibold">{{ t('settings.batchConcurrency') }}</label>
                             <label class="text-gray-700">{{ t('settings.batchConcurrencyDesc') }}</label>
                             <input v-model.number="settings.batchLoginConcurrency" type="number" min="1" max="20"
-                                class="mt-1 block w-full rounded-xl border-gray-300 bg-white/60 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                                class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-12 text-base px-4">
                             <span class="text-xs text-gray-500">{{ t('settings.batchConcurrencyHint') }}</span>
                             <button @click="saveBatchLoginConcurrency"
-                                class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
                     <!-- 思考输出 -->
-                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                        <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
                         </div>
                         <div class="relative flex flex-col gap-2">
                             <label class="text-gray-700 font-semibold">{{ t('settings.thinkOutput') }}</label>
                             <div class="flex items-center gap-2">
                                 <input v-model="settings.outThink" type="checkbox"
-                                    class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    class="h-5 w-5 rounded border-[#c8b9a8] accent-[#b56535]">
                                 <span>{{ t('settings.enableThinkOutput') }}</span>
                             </div>
                             <button @click="saveOutThink"
-                                class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
                     <!-- 搜索信息模式 -->
-                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                        <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
                         </div>
                         <div class="relative flex flex-col gap-2">
                             <label class="text-gray-700 font-semibold">{{ t('settings.searchMode') }}</label>
                             <select v-model="settings.searchInfoMode"
-                                class="mt-1 block w-full rounded-xl border-gray-300 bg-white/60 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                                class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-12 text-base px-4">
                                 <option value="table">{{ t('settings.searchTable') }}</option>
                                 <option value="text">{{ t('settings.searchText') }}</option>
                             </select>
                             <button @click="saveSearchInfoMode"
-                                class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
                     <!-- 简化模型映射 -->
-                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                        <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
                         </div>
                         <div class="relative flex flex-col gap-2">
                             <label class="text-gray-700 font-semibold">{{ t('settings.simpleModelMap') }}</label>
                             <div class="flex items-center gap-2">
                                 <input v-model="settings.simpleModelMap" type="checkbox"
-                                    class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    class="h-5 w-5 rounded border-[#c8b9a8] accent-[#b56535]">
                                 <span>{{ t('settings.simpleModelMapDesc') }}</span>
                             </div>
                             <button @click="saveSimpleModelMap"
-                                class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
                     <!-- 会话流式默认设置 -->
@@ -179,20 +179,20 @@
                         </div>
                     </div>
                     <!-- 聊天请求 retry 配置 -->
-                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4">
-                        <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30 rounded-2xl">
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
                         </div>
                         <div class="relative flex flex-col gap-2">
                             <label class="text-gray-700 font-semibold">{{ t('settings.retryTitle') }}</label>
                             <label class="text-gray-700">{{ t('settings.retryCountLabel') }}</label>
                             <input v-model.number="settings.chatRetryCount" type="number" min="0" max="10"
-                                class="mt-1 block w-full rounded-xl border-gray-300 bg-white/60 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                                class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-12 text-base px-4">
                             <label class="text-gray-700">{{ t('settings.retryBackoffLabel') }}</label>
                             <input v-model.number="settings.chatRetryBackoffMs" type="number" min="0" max="60000"
-                                class="mt-1 block w-full rounded-xl border-gray-300 bg-white/60 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-all duration-300 h-12 text-base px-4">
+                                class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-12 text-base px-4">
                             <span class="text-xs text-gray-500">{{ t('settings.retryHint') }}</span>
                             <button @click="saveRetryConfig"
-                                class="w-full mt-2 bg-black text-white rounded-lg py-2 hover:bg-white hover:text-black border border-black transition-all duration-300">{{ t('settings.save') }}</button>
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
                         </div>
                     </div>
                 </div>
@@ -211,7 +211,7 @@
                             {{ t('settings.cancel') }}
                         </button>
                         <button @click="addRegularKey"
-                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all">
+                            class="px-4 py-2 bg-[#b56535] text-white rounded-lg hover:bg-[#9f532d] transition-all">
                             {{ t('settings.add') }}
                         </button>
                     </div>
