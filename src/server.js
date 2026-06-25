@@ -80,9 +80,9 @@ const applyPersistedSettings = async () => {
       const v = parseInt(persisted.chatRetryBackoffMs, 10)
       if (!isNaN(v) && v >= 0) config.chatRetryBackoffMs = v
     }
-    // Restore persisted adminKey first so web UI changes survive restart.
-    // This intentionally overrides env ADMIN_KEY when settings.adminKey exists.
-    if (typeof persisted.adminKey === 'string' && persisted.adminKey.trim()) {
+    // Restore persisted adminKey only when env does NOT explicitly set ADMIN_KEY.
+    // This makes .env authoritative when you change it later.
+    if (!(process.env.ADMIN_KEY || '').trim() && typeof persisted.adminKey === 'string' && persisted.adminKey.trim()) {
       config.adminKey = persisted.adminKey.trim()
     }
     // Only restore persisted downstream API keys; never infer adminKey from apiKeys here.

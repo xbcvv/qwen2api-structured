@@ -187,7 +187,7 @@
     "simpleMapSaved": "Simplified model mapping settings saved successfully",
     "thinkFailed": "Thinking output settings failed to save:",
     "thinkSaved": "Think output settings saved successfully",
-    "adminKeySaved": "Admin key updated. Please re-login with the new key.",
+    "adminKeySaved": "Admin key updated for the current session. If ADMIN_KEY is set in .env, it will take precedence after restart.",
     "adminKeyFailed": "Admin key update failed: ",
     "adminKeyRequired": "Please enter a new admin key"
   },

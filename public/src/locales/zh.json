@@ -183,7 +183,7 @@
     "confirmDeleteKey": "确定要删除此API Key吗？",
     "keyDeleted": "API Key删除成功",
     "keyDeleteFailed": "API Key删除失败: ",
-    "adminKeySaved": "管理员密钥已更新，使用新密钥重新登录",
+    "adminKeySaved": "管理员密钥已更新，当前会话立即生效；如果 .env 设置了 ADMIN_KEY，重启后将以 .env 为准",
     "adminKeyFailed": "管理员密钥更新失败：",
     "adminKeyRequired": "请输入新的管理员密钥"
   },

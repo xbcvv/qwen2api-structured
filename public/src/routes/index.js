@@ -50,21 +50,25 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.path === '/chat') {
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) {
+    const key = localStorage.getItem('adminKey') || localStorage.getItem('apiKey')
+    if (!key) {
       next({ path: '/auth' })
       return
     }
     try {
-      const verifyResponse = await axios.post('/verify', { apiKey })
+      const verifyResponse = await axios.post('/verify', { apiKey: key })
       if (verifyResponse.data.status === 200) {
         next()
       } else {
+        localStorage.removeItem('adminKey')
         localStorage.removeItem('apiKey')
+        localStorage.removeItem('isAdmin')
         next({ path: '/auth' })
       }
     } catch (_) {
+      localStorage.removeItem('adminKey')
       localStorage.removeItem('apiKey')
+      localStorage.removeItem('isAdmin')
       next({ path: '/auth' })
     }
     return
