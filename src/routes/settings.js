@@ -7,12 +7,30 @@ const { logger } = require('../utils/logger')
 
 const dataPersistence = new DataPersistence()
 
+const maskKey = (key) => {
+  if (!key) return ''
+  if (key.length <= 10) return `${key.slice(0, 2)}***${key.slice(-2)}`
+  return `${key.slice(0, 6)}***${key.slice(-4)}`
+}
+
+const generateKey = (prefix = 'sk') => {
+  const crypto = require('crypto')
+  return `${prefix}-${crypto.randomBytes(24).toString('base64url')}`
+}
+
+const persistKeys = async () => dataPersistence.saveSettings({
+  adminKey: config.adminKey,
+  apiKeys: config.apiKeys
+})
+
 
 router.get('/settings', adminKeyVerify, async (req, res) => {
   res.json({
     adminKeySet: !!config.adminKey,
-    adminKeyHint: config.adminKey ? `${config.adminKey.slice(0, 3)}***${config.adminKey.slice(-3)}` : '',
+    adminKeyHint: maskKey(config.adminKey),
+    adminKeyMasked: maskKey(config.adminKey),
     regularKeys: config.apiKeys,
+    regularKeyItems: config.apiKeys.map((key, index) => ({ index, masked: maskKey(key) })),
     defaultHeaders: config.defaultHeaders,
     defaultCookie: config.defaultCookie,
     autoRefresh: config.autoRefresh,
@@ -30,22 +48,17 @@ router.get('/settings', adminKeyVerify, async (req, res) => {
 // 添加普通API Key
 router.post('/addRegularKey', adminKeyVerify, async (req, res) => {
   try {
-    const { apiKey } = req.body
-    if (!apiKey) {
+    const nextKey = String(req.body.apiKey || generateKey('sk')).trim()
+    if (!nextKey) {
       return res.status(400).json({ error: 'API Key不能为空' })
     }
-
-    // 检查是否已存在
-    if (config.apiKeys.includes(apiKey)) {
+    if (nextKey === config.adminKey || config.apiKeys.includes(nextKey)) {
       return res.status(409).json({ error: 'API Key已存在' })
     }
 
-    // 添加到配置中
-    config.apiKeys.push(apiKey)
-
-    const persisted = await dataPersistence.saveSettings({ apiKeys: config.apiKeys })
-
-    res.json({ message: 'API Key添加成功', persisted })
+    config.apiKeys.push(nextKey)
+    const persisted = await persistKeys()
+    res.json({ message: 'API Key添加成功', key: nextKey, masked: maskKey(nextKey), persisted })
   } catch (error) {
     logger.error('添加API Key失败', 'CONFIG', '', error)
     res.status(500).json({ error: error.message })
@@ -55,29 +68,64 @@ router.post('/addRegularKey', adminKeyVerify, async (req, res) => {
 // 删除普通API Key
 router.post('/deleteRegularKey', adminKeyVerify, async (req, res) => {
   try {
-    const { apiKey } = req.body
-    if (!apiKey) {
-      return res.status(400).json({ error: 'API Key不能为空' })
-    }
-
-    // 不能删除管理员密钥
-    if (apiKey === config.adminKey) {
-      return res.status(403).json({ error: '不能删除管理员密钥' })
-    }
-
-    // 从配置中移除
-    const index = config.apiKeys.indexOf(apiKey)
-    if (index === -1) {
+    const index = Number.isInteger(req.body.index) ? req.body.index : config.apiKeys.indexOf(req.body.apiKey)
+    if (index < 0 || index >= config.apiKeys.length) {
       return res.status(404).json({ error: 'API Key不存在' })
     }
 
     config.apiKeys.splice(index, 1)
-
-    const persisted = await dataPersistence.saveSettings({ apiKeys: config.apiKeys })
-
+    const persisted = await persistKeys()
     res.json({ message: 'API Key删除成功', persisted })
   } catch (error) {
     logger.error('删除API Key失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/updateRegularKey', adminKeyVerify, async (req, res) => {
+  try {
+    const index = Number(req.body.index)
+    const nextKey = String(req.body.apiKey || '').trim()
+    if (index < 0 || index >= config.apiKeys.length) return res.status(404).json({ error: 'API Key不存在' })
+    if (!nextKey) return res.status(400).json({ error: 'API Key不能为空' })
+    if (nextKey === config.adminKey || config.apiKeys.some((key, i) => key === nextKey && i !== index)) {
+      return res.status(409).json({ error: 'API Key已存在' })
+    }
+    config.apiKeys[index] = nextKey
+    const persisted = await persistKeys()
+    res.json({ message: 'API Key更新成功', masked: maskKey(nextKey), persisted })
+  } catch (error) {
+    logger.error('更新API Key失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/rotateRegularKey', adminKeyVerify, async (req, res) => {
+  try {
+    const index = Number(req.body.index)
+    if (index < 0 || index >= config.apiKeys.length) return res.status(404).json({ error: 'API Key不存在' })
+    const nextKey = generateKey('sk')
+    config.apiKeys[index] = nextKey
+    const persisted = await persistKeys()
+    res.json({ message: 'API Key已轮转', key: nextKey, masked: maskKey(nextKey), persisted })
+  } catch (error) {
+    logger.error('轮转API Key失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/revealKey', adminKeyVerify, async (req, res) => {
+  try {
+    const { type } = req.body
+    if (type === 'admin') return res.json({ key: config.adminKey || '' })
+    if (type === 'regular') {
+      const index = Number(req.body.index)
+      if (index < 0 || index >= config.apiKeys.length) return res.status(404).json({ error: 'API Key不存在' })
+      return res.json({ key: config.apiKeys[index] })
+    }
+    res.status(400).json({ error: '未知密钥类型' })
+  } catch (error) {
+    logger.error('查看密钥失败', 'CONFIG', '', error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -247,6 +295,34 @@ router.post('/setChatStream', adminKeyVerify, async (req, res) => {
   }
 })
 
+router.post('/deleteAdminKey', adminKeyVerify, async (req, res) => {
+  try {
+    const envAdminKey = (process.env.ADMIN_KEY || '').trim()
+    if (!envAdminKey) {
+      return res.status(400).json({ error: '没有 ADMIN_KEY 环境变量兜底，拒绝删除最后一个管理员密钥以防锁死' })
+    }
+    config.adminKey = envAdminKey
+    const persisted = await persistKeys()
+    res.json({ message: '管理员密钥已恢复为环境变量 ADMIN_KEY', masked: maskKey(config.adminKey), persisted })
+  } catch (error) {
+    logger.error('删除管理员密钥失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/rotateAdminKey', adminKeyVerify, async (req, res) => {
+  try {
+    const nextAdminKey = generateKey('adm')
+    config.adminKey = nextAdminKey
+    config.apiKeys = config.apiKeys.filter(key => key && key !== nextAdminKey)
+    const persisted = await persistKeys()
+    res.json({ message: '管理员密钥已轮转', key: nextAdminKey, masked: maskKey(nextAdminKey), persisted })
+  } catch (error) {
+    logger.error('轮转管理员密钥失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 router.post('/setAdminKey', adminKeyVerify, async (req, res) => {
   try {
     const { adminKey } = req.body
@@ -260,12 +336,9 @@ router.post('/setAdminKey', adminKeyVerify, async (req, res) => {
     // Ensure downstream keys do not contain the new admin key.
     config.apiKeys = config.apiKeys.filter(key => key && key !== nextAdminKey)
 
-    const persisted = await dataPersistence.saveSettings({
-      adminKey: config.adminKey,
-      apiKeys: config.apiKeys
-    })
+    const persisted = await persistKeys()
 
-    res.json({ message: '管理员密钥更新成功', persisted })
+    res.json({ message: '管理员密钥更新成功', masked: maskKey(config.adminKey), persisted })
   } catch (error) {
     logger.error('更新管理员密钥失败', 'CONFIG', '', error)
     res.status(500).json({ error: error.message })

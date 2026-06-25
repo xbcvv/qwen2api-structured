@@ -15,52 +15,72 @@
                 <!-- API Key 管理 -->
                 <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
                     <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl"></div>
-                    <div class="relative flex flex-col gap-4">
-                        <label class="text-gray-700 font-semibold text-lg">{{ t('settings.apiKeyTitle') }}</label>
+                    <div class="relative flex flex-col gap-5">
+                        <div>
+                            <label class="text-gray-800 font-semibold text-lg">{{ t('settings.apiKeyTitle') }}</label>
+                            <p class="text-sm text-gray-500 mt-1">{{ t('settings.keyManagerHint') }}</p>
+                        </div>
 
-                        <!-- 管理员密钥修改 -->
-                        <div class="bg-[#fef9f1] border border-[#e8d5b0] rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-[#9a6020] font-semibold">{{ t('settings.adminKeyTitle') }}</span>
-                                <span v-if="settings.adminKeySet" class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">{{ t('settings.adminKeySet') }}</span>
-                                <span v-else class="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">{{ t('settings.adminKeyUnset') }}</span>
+                        <!-- 管理员密钥 -->
+                        <div class="rounded-2xl border border-[#e8d5b0] bg-[#fef9f1] p-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div>
+                                    <div class="text-[#9a6020] font-semibold">{{ t('settings.adminKeyTitle') }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">{{ t('settings.adminKeyHint') }}</div>
+                                </div>
+                                <span v-if="settings.adminKeySet" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">{{ t('settings.adminKeySet') }}</span>
+                                <span v-else class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">{{ t('settings.adminKeyUnset') }}</span>
                             </div>
-                            <div v-if="settings.adminKeyHint" class="text-sm text-gray-600 mb-2">🔑 {{ settings.adminKeyHint }}</div>
-                            <div v-else class="text-sm text-red-500 mb-2">{{ t('settings.adminKeyMissing') }}</div>
-                            <div class="text-xs text-gray-500 mb-2">{{ t('settings.adminKeyHint') }}</div>
-                            <div class="flex gap-2">
-                                <input v-model="newAdminKey" type="password"
-                                    :placeholder="t('settings.adminKeyInput')"
-                                    class="flex-1 rounded-lg border-gray-300 bg-white shadow-sm h-8 text-sm px-3">
-                                <button @click="saveAdminKey"
-                                    class="bg-[#b56535] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#9f532d] transition-all">
-                                    {{ t('settings.adminKeySave') }}
-                                </button>
+                            <div class="flex flex-col md:flex-row gap-2">
+                                <input :value="visibleAdminKey ? revealed.admin : settings.adminKeyMasked" readonly
+                                    class="flex-1 rounded-lg border border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3 font-mono">
+                                <input v-model="newAdminKey" type="password" :placeholder="t('settings.adminKeyInput')"
+                                    class="flex-1 rounded-lg border border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3 font-mono">
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <button @click="saveAdminKey" class="key-btn primary-key-btn">{{ t('settings.edit') }}</button>
+                                <button @click="toggleRevealAdmin" class="key-btn">{{ visibleAdminKey ? t('settings.hide') : t('settings.view') }}</button>
+                                <button @click="copyAdminKey" class="key-btn">{{ t('settings.copy') }}</button>
+                                <button @click="rotateAdminKey" class="key-btn warn-key-btn">{{ t('settings.rotate') }}</button>
+                                <button @click="deleteAdminKey" class="key-btn danger-key-btn">{{ t('settings.delete') }}</button>
                             </div>
                         </div>
 
                         <!-- 下游密钥列表 -->
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700 font-semibold">{{ t('settings.regularKeys') }}</span>
-                                <button @click="showAddKeyModal = true"
-                                    class="bg-[#5f8a4b] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#4d7339] transition-all">
-                                    {{ t('settings.addKey') }}
-                                </button>
+                        <div class="rounded-2xl border border-[#e3ded6] bg-white p-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div>
+                                    <div class="text-gray-800 font-semibold">{{ t('settings.regularKeys') }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">{{ t('settings.regularKeysHint') }}</div>
+                                </div>
+                                <button @click="addRegularKey(true)" class="key-btn primary-key-btn">{{ t('settings.generate') }}</button>
                             </div>
 
-                            <div v-if="settings.regularKeys.length === 0" class="text-gray-500 text-center py-4">
+                            <div class="flex flex-col md:flex-row gap-2 mb-3">
+                                <input v-model="newApiKey" type="password" :placeholder="t('settings.addKeyPlaceholder')"
+                                    class="flex-1 rounded-lg border border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3 font-mono">
+                                <button @click="addRegularKey(false)" class="key-btn primary-key-btn">{{ t('settings.add') }}</button>
+                            </div>
+
+                            <div v-if="settings.regularKeyItems.length === 0" class="text-gray-500 text-center py-4">
                                 {{ t('settings.noKeys') }}
                             </div>
 
-                            <div v-for="(key, index) in settings.regularKeys" :key="index"
-                                class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
-                                <input :value="key" type="text" readonly
-                                    class="flex-1 rounded-lg border-gray-300 bg-white shadow-sm h-8 text-sm px-3">
-                                <button @click="deleteRegularKey(index)"
-                                    class="bg-[#c04a3a] text-white px-3 py-1 rounded-lg text-sm hover:bg-[#a83c2e] transition-all">
-                                    {{ t('settings.delete') }}
-                                </button>
+                            <div v-for="item in settings.regularKeyItems" :key="item.index"
+                                class="flex flex-col gap-2 bg-[#fbfaf7] border border-[#e3ded6] rounded-xl p-3 mb-2">
+                                <div class="flex flex-col md:flex-row gap-2">
+                                    <input :value="visibleRegularKeys[item.index] ? revealed.regular[item.index] : item.masked" readonly
+                                        class="flex-1 rounded-lg border border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3 font-mono">
+                                    <input v-model="editRegularKeys[item.index]" type="password" :placeholder="t('settings.newKeyPlaceholder')"
+                                        class="flex-1 rounded-lg border border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3 font-mono">
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button @click="updateRegularKey(item.index)" class="key-btn primary-key-btn">{{ t('settings.edit') }}</button>
+                                    <button @click="toggleRevealRegular(item.index)" class="key-btn">{{ visibleRegularKeys[item.index] ? t('settings.hide') : t('settings.view') }}</button>
+                                    <button @click="copyRegularKey(item.index)" class="key-btn">{{ t('settings.copy') }}</button>
+                                    <button @click="rotateRegularKey(item.index)" class="key-btn warn-key-btn">{{ t('settings.rotate') }}</button>
+                                    <button @click="deleteRegularKey(item.index)" class="key-btn danger-key-btn">{{ t('settings.delete') }}</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -198,25 +218,6 @@
                 </div>
             </div>
 
-            <!-- 添加API Key模态框 -->
-            <div v-if="showAddKeyModal"
-                class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-96 max-w-90vw">
-                    <h3 class="text-lg font-semibold mb-4">{{ t('settings.addKeyTitle') }}</h3>
-                    <input v-model="newApiKey" type="text" :placeholder="t('settings.addKeyPlaceholder')"
-                        class="w-full rounded-lg border-gray-300 shadow-sm h-10 text-sm px-3 mb-4">
-                    <div class="flex gap-2 justify-end">
-                        <button @click="showAddKeyModal = false"
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all">
-                            {{ t('settings.cancel') }}
-                        </button>
-                        <button @click="addRegularKey"
-                            class="px-4 py-2 bg-[#b56535] text-white rounded-lg hover:bg-[#9f532d] transition-all">
-                            {{ t('settings.add') }}
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </template>
@@ -233,6 +234,8 @@ const settings = ref({
     adminKeySet: false,
     adminKeyHint: '',
     regularKeys: [],
+    regularKeyItems: [],
+    adminKeyMasked: '',
     defaultHeaders: '',
     defaultCookie: '',
     autoRefresh: false,
@@ -246,9 +249,12 @@ const settings = ref({
     chatRetryBackoffMs: 400
 })
 
-const showAddKeyModal = ref(false)
 const newApiKey = ref('')
 const newAdminKey = ref('')
+const visibleAdminKey = ref(false)
+const visibleRegularKeys = ref({})
+const revealed = ref({ admin: '', regular: {} })
+const editRegularKeys = ref({})
 
 const loadSettings = async () => {
     try {
@@ -259,7 +265,9 @@ const loadSettings = async () => {
         })
         settings.value.adminKeySet = res.data.adminKeySet
         settings.value.adminKeyHint = res.data.adminKeyHint || ''
+        settings.value.adminKeyMasked = res.data.adminKeyMasked || res.data.adminKeyHint || ''
         settings.value.regularKeys = res.data.regularKeys || []
+        settings.value.regularKeyItems = res.data.regularKeyItems || []
         settings.value.defaultHeaders = JSON.stringify(res.data.defaultHeaders)
         settings.value.defaultCookie = res.data.defaultCookie
         settings.value.autoRefresh = res.data.autoRefresh
@@ -276,16 +284,6 @@ const loadSettings = async () => {
     }
 }
 
-const saveApiKey = async () => {
-    try {
-        await axios.post('/api/setApiKey', { apiKey: settings.value.apiKey }, {
-            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
-        })
-        alert(t('smsg.apiKeySaved'))
-    } catch (error) {
-        alert(t('smsg.apiKeyFailed') + error.message)
-    }
-}
 const saveAutoRefresh = async () => {
     try {
         await axios.post('/api/setAutoRefresh', {
@@ -366,17 +364,29 @@ const saveRetryConfig = async () => {
 }
 
 // API Key 管理相关函数
+const authHeaders = () => ({ headers: { 'Authorization': localStorage.getItem('adminKey') || '' } })
+
+const copyText = async (text) => {
+    await navigator.clipboard.writeText(text)
+    alert(t('smsg.keyCopied'))
+}
+
+const revealKey = async (payload) => {
+    const res = await axios.post('/api/revealKey', payload, authHeaders())
+    return res.data.key || ''
+}
+
 const saveAdminKey = async () => {
     if (!newAdminKey.value.trim()) {
         alert(t('smsg.adminKeyRequired'))
         return
     }
     try {
-        await axios.post('/api/setAdminKey', { adminKey: newAdminKey.value.trim() }, {
-            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
-        })
-        // Update local storage with new key
-        localStorage.setItem('adminKey', newAdminKey.value.trim())
+        const nextKey = newAdminKey.value.trim()
+        await axios.post('/api/setAdminKey', { adminKey: nextKey }, authHeaders())
+        localStorage.setItem('adminKey', nextKey)
+        revealed.value.admin = nextKey
+        visibleAdminKey.value = false
         newAdminKey.value = ''
         await loadSettings()
         alert(t('smsg.adminKeySaved'))
@@ -385,37 +395,118 @@ const saveAdminKey = async () => {
     }
 }
 
-const addRegularKey = async () => {
-    if (!newApiKey.value.trim()) {
+const toggleRevealAdmin = async () => {
+    if (!visibleAdminKey.value && !revealed.value.admin) {
+        revealed.value.admin = await revealKey({ type: 'admin' })
+    }
+    visibleAdminKey.value = !visibleAdminKey.value
+}
+
+const copyAdminKey = async () => {
+    if (!revealed.value.admin) revealed.value.admin = await revealKey({ type: 'admin' })
+    await copyText(revealed.value.admin)
+}
+
+const rotateAdminKey = async () => {
+    if (!confirm(t('smsg.confirmRotateAdminKey'))) return
+    try {
+        const res = await axios.post('/api/rotateAdminKey', {}, authHeaders())
+        localStorage.setItem('adminKey', res.data.key)
+        revealed.value.admin = res.data.key
+        visibleAdminKey.value = false
+        await loadSettings()
+        alert(t('smsg.adminKeyRotated'))
+    } catch (error) {
+        alert(t('smsg.adminKeyFailed') + (error.response?.data?.error || error.message))
+    }
+}
+
+const deleteAdminKey = async () => {
+    if (!confirm(t('smsg.confirmDeleteAdminKey'))) return
+    try {
+        const res = await axios.post('/api/deleteAdminKey', {}, authHeaders())
+        if (res.data.key) localStorage.setItem('adminKey', res.data.key)
+        revealed.value.admin = ''
+        visibleAdminKey.value = false
+        await loadSettings()
+        alert(t('smsg.adminKeyDeleted'))
+    } catch (error) {
+        alert(t('smsg.adminKeyFailed') + (error.response?.data?.error || error.message))
+    }
+}
+
+const addRegularKey = async (generated = false) => {
+    if (!generated && !newApiKey.value.trim()) {
         alert(t('smsg.enterKey'))
         return
     }
-
     try {
-        await axios.post('/api/addRegularKey', { apiKey: newApiKey.value.trim() }, {
-            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
-        })
+        const payload = generated ? {} : { apiKey: newApiKey.value.trim() }
+        const res = await axios.post('/api/addRegularKey', payload, authHeaders())
+        if (res.data.key) await copyText(res.data.key)
         alert(t('smsg.keyAdded'))
         newApiKey.value = ''
-        showAddKeyModal.value = false
         await loadSettings()
     } catch (error) {
-        alert(t('smsg.keyAddFailed') + error.message)
+        alert(t('smsg.keyAddFailed') + (error.response?.data?.error || error.message))
+    }
+}
+
+const updateRegularKey = async (index) => {
+    const nextKey = (editRegularKeys.value[index] || '').trim()
+    if (!nextKey) {
+        alert(t('smsg.enterKey'))
+        return
+    }
+    try {
+        await axios.post('/api/updateRegularKey', { index, apiKey: nextKey }, authHeaders())
+        editRegularKeys.value[index] = ''
+        revealed.value.regular[index] = nextKey
+        visibleRegularKeys.value[index] = false
+        await loadSettings()
+        alert(t('smsg.keyUpdated'))
+    } catch (error) {
+        alert(t('smsg.keyUpdateFailed') + (error.response?.data?.error || error.message))
+    }
+}
+
+const toggleRevealRegular = async (index) => {
+    if (!visibleRegularKeys.value[index] && !revealed.value.regular[index]) {
+        revealed.value.regular[index] = await revealKey({ type: 'regular', index })
+    }
+    visibleRegularKeys.value[index] = !visibleRegularKeys.value[index]
+}
+
+const copyRegularKey = async (index) => {
+    if (!revealed.value.regular[index]) revealed.value.regular[index] = await revealKey({ type: 'regular', index })
+    await copyText(revealed.value.regular[index])
+}
+
+const rotateRegularKey = async (index) => {
+    if (!confirm(t('smsg.confirmRotateKey'))) return
+    try {
+        const res = await axios.post('/api/rotateRegularKey', { index }, authHeaders())
+        revealed.value.regular[index] = res.data.key
+        visibleRegularKeys.value[index] = false
+        await loadSettings()
+        await copyText(res.data.key)
+        alert(t('smsg.keyRotated'))
+    } catch (error) {
+        alert(t('smsg.keyRotateFailed') + (error.response?.data?.error || error.message))
     }
 }
 
 const deleteRegularKey = async (index) => {
     if (!confirm(t('smsg.confirmDeleteKey'))) return
-
-    const keyToDelete = settings.value.regularKeys[index]
     try {
-        await axios.post('/api/deleteRegularKey', { apiKey: keyToDelete }, {
-            headers: { 'Authorization': localStorage.getItem('adminKey') || '' }
-        })
+        await axios.post('/api/deleteRegularKey', { index }, authHeaders())
+        delete visibleRegularKeys.value[index]
+        delete revealed.value.regular[index]
+        delete editRegularKeys.value[index]
         alert(t('smsg.keyDeleted'))
         await loadSettings()
     } catch (error) {
-        alert(t('smsg.keyDeleteFailed') + error.message)
+        alert(t('smsg.keyDeleteFailed') + (error.response?.data?.error || error.message))
     }
 }
 
@@ -436,6 +527,24 @@ onMounted(() => {
     box-shadow: 0 12px 36px 0 rgba(31, 38, 135, 0.18);
     transform: translateY(-2px) scale(1.01);
 }
+
+.key-btn {
+    border: 1px solid #c8b9a8;
+    background: #f5f0e8;
+    color: #6f5639;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all .2s ease;
+}
+.key-btn:hover { background: #ede5d8; border-color: #b56535; }
+.primary-key-btn { background: #b56535; border-color: #b56535; color: #fff; }
+.primary-key-btn:hover { background: #9f532d; }
+.warn-key-btn { background: #f4e3cf; border-color: #d7a069; color: #8a4f1f; }
+.warn-key-btn:hover { background: #ecd4b8; }
+.danger-key-btn { background: #c04a3a; border-color: #c04a3a; color: #fff; }
+.danger-key-btn:hover { background: #a83c2e; }
 
 .action-button {
     backdrop-filter: blur(4px);

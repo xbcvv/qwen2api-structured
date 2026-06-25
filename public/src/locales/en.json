@@ -169,7 +169,17 @@
     "chatStreamDesc": "Set the default response mode for the test chat page.",
     "chatStreamHint": "System settings save the default value. The test chat page can temporarily override it for the current session.",
     "chatStreamOn": "Streaming enabled by default: tokens are displayed as they arrive.",
-    "chatStreamOff": "Streaming disabled by default: full response is shown after completion."
+    "chatStreamOff": "Streaming disabled by default: full response is shown after completion.",
+    "keyManagerHint": "Separate admin and downstream keys. Plaintext is only available when explicitly revealed.",
+    "regularKeysHint": "Used by OpenAI-compatible /v1/* endpoints. Leave blank when adding to auto-generate a key.",
+    "newKeyPlaceholder": "Enter a new key (leave blank to auto-generate)",
+    "generate": "Generate",
+    "edit": "Edit",
+    "view": "Reveal",
+    "hide": "Hide",
+    "copy": "Copy",
+    "rotate": "Rotate",
+    "update": "Update"
   },
   "smsg": {
     "apiKeyFailed": "API Key saving failed:",
@@ -196,7 +206,17 @@
     "adminKeyFailed": "Admin key update failed: ",
     "adminKeyRequired": "Please enter a new admin key",
     "chatStreamSaved": "Chat stream setting saved successfully",
-    "chatStreamFailed": "Failed to save chat stream setting: "
+    "chatStreamFailed": "Failed to save chat stream setting: ",
+    "keyCopied": "Key copied",
+    "keyUpdated": "Downstream key updated successfully",
+    "keyUpdateFailed": "Failed to update downstream key: ",
+    "keyRotated": "Downstream key rotated and copied",
+    "keyRotateFailed": "Failed to rotate downstream key: ",
+    "confirmRotateAdminKey": "Rotating the admin key will invalidate the old key immediately. Continue?",
+    "confirmDeleteAdminKey": "Removing the admin key will fall back to the ADMIN_KEY environment variable (if configured). Continue?",
+    "confirmRotateKey": "Rotating a key will invalidate the old one immediately and copy the new key. Continue?",
+    "adminKeyRotated": "Admin key rotated and copied",
+    "adminKeyDeleted": "Admin key removed / restored to env"
   },
   "stats": {
     "account": {

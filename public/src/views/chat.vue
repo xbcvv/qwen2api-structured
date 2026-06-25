@@ -21,7 +21,8 @@
               rel="noreferrer"
               class="message-image-link"
             >
-              <img :src="url" alt="generated image" class="message-image" loading="lazy" />
+              <img :src="getImageProxyUrl(url)" alt="generated image" class="message-image" loading="lazy" @error="markImageFailed(url)" />
+              <span v-if="failedImages[url]" class="message-image-error">图片加载失败，点击打开原图</span>
             </a>
           </div>
         </div>
@@ -95,6 +96,7 @@ const state = reactive({
   model: "",
   stream: true,
   streaming: false,
+  failedImages: {},
 });
 
 /* ===================== SSE helpers ===================== */
@@ -272,6 +274,7 @@ function abort() {
 const markdownImageRe = /!\[[^\]]*\]\((https?:\/\/[^\s)]+|data:image\/[^\s)]+)\)/gi;
 const plainImageUrlRe = /(https?:\/\/[^\s)\]"'<>]+|data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)/gi;
 const imageExtRe = /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?|#|$)/i;
+const failedImages = state.failedImages;
 
 function isImageUrl(url) {
   return imageExtRe.test(url) || url.startsWith('data:image/');
@@ -304,6 +307,15 @@ function getMessageText(content) {
     text = text.replace(url, '').trim();
   });
   return text;
+}
+
+function getImageProxyUrl(url) {
+  if (url.startsWith('data:image/')) return url;
+  return `/v1/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
+function markImageFailed(url) {
+  failedImages[url] = true;
 }
 
 /* ===================== Init ===================== */
@@ -362,6 +374,15 @@ onMounted(async function () {
   overflow: hidden;
   background: #fff;
   box-shadow: 0 4px 16px rgba(45,42,36,.06);
+}
+
+.message-image-error {
+  display: block;
+  padding: 8px 10px;
+  color: #a83c2e;
+  font-size: 12px;
+  background: #fff8f1;
+  border-top: 1px solid #e3ded6;
 }
 
 .message-image {

@@ -165,7 +165,17 @@
     "chatStreamDesc": "设置测试会话默认使用流式还是非流式响应。",
     "chatStreamHint": "系统设置保存的是默认值，测试会话页可临时覆盖本次会话。",
     "chatStreamOn": "默认启用流式响应：边生成边显示，交互更快。",
-    "chatStreamOff": "默认关闭流式响应：等待完整结果后一次性显示。"
+    "chatStreamOff": "默认关闭流式响应：等待完整结果后一次性显示。",
+    "keyManagerHint": "两种密钥分离管理，明文仅在需要时可查看一次。",
+    "regularKeysHint": "用于 OpenAI-compatible /v1/* 调用。增加时留空可自动生成随机密钥。",
+    "newKeyPlaceholder": "输入新密钥（留空则自动生成）",
+    "generate": "生成",
+    "edit": "修改",
+    "view": "查看",
+    "hide": "隐藏",
+    "copy": "复制",
+    "rotate": "轮转",
+    "update": "更新"
   },
   "smsg": {
     "apiKeySaved": "API Key保存成功",
@@ -192,7 +202,17 @@
     "adminKeyFailed": "管理员密钥更新失败：",
     "adminKeyRequired": "请输入新的管理员密钥",
     "chatStreamSaved": "会话流式设置保存成功",
-    "chatStreamFailed": "会话流式设置保存失败："
+    "chatStreamFailed": "会话流式设置保存失败：",
+    "keyCopied": "密钥已复制",
+    "keyUpdated": "下游密钥更新成功",
+    "keyUpdateFailed": "下游密钥更新失败：",
+    "keyRotated": "下游密钥已轮转，并自动复制",
+    "keyRotateFailed": "下游密钥轮转失败：",
+    "confirmRotateAdminKey": "轮转管理员密钥后，旧密钥立即失效。确认继续？",
+    "confirmDeleteAdminKey": "删除管理员密钥后，将恢复为环境变量 ADMIN_KEY（如果已配置）。确认继续？",
+    "confirmRotateKey": "轮转后旧密钥立即失效，新密钥将自动复制到剪贴板。确认继续？",
+    "adminKeyRotated": "管理员密钥已轮转并自动复制",
+    "adminKeyDeleted": "管理员密钥已删除/恢复"
   },
   "lang": {
     "label": "🌐 语言 / Language",
