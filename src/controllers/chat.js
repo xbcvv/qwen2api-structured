@@ -302,6 +302,44 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
 
         await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef, onDelta)
 
+        // Upstream error auto-retry: if upstream returned empty response or internal_error,
+        // retry once with a fresh request (different account via rotator)
+        const isUpstreamFailure = (
+            (accumulator.answer.length === 0 && accumulator.think.length === 0 && accumulator.unknown.length === 0) ||
+            accumulator.parseErrors.some(e => e.includes('internal_error'))
+        )
+        if (isUpstreamFailure) {
+            logger.warning?.(`上游返回空内容/internal_error，自动重试一次 (raw_events=${accumulator.rawEvents.length}, parse_errors=${accumulator.parseErrors.length})`, 'CHAT')
+            try {
+                const retryResp = await sendChatRequest(requestBody)
+                if (retryResp.status && retryResp.response) {
+                    const retryAccumulator = createPhaseAccumulator()
+                    const retryTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
+                    await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, retryTokensRef, onDelta)
+                    // If retry succeeded, merge results
+                    if (retryAccumulator.answer.length > 0 || retryAccumulator.unknown.length > 0) {
+                        accumulator.answer = retryAccumulator.answer
+                        accumulator.think = retryAccumulator.think
+                        accumulator.unknown = retryAccumulator.unknown
+                        accumulator.raw += retryAccumulator.raw
+                        accumulator.webSearchInfo = retryAccumulator.webSearchInfo || accumulator.webSearchInfo
+                        accumulator.imageMarkdownList = retryAccumulator.imageMarkdownList.length > 0 ? retryAccumulator.imageMarkdownList : accumulator.imageMarkdownList
+                        accumulator.parseErrors = retryAccumulator.parseErrors
+                        totalTokensRef.value = retryTokensRef.value
+                        logger.info?.('上游重试成功', 'CHAT')
+                    } else {
+                        logger.warning?.('上游重试仍然失败', 'CHAT')
+                        accumulator.raw += retryAccumulator.raw
+                        accumulator.parseErrors.push(...retryAccumulator.parseErrors)
+                    }
+                } else {
+                    logger.warning?.('上游重试请求失败（无法获取连接）', 'CHAT')
+                }
+            } catch (retryErr) {
+                logger.error('上游重试异常', 'CHAT', '', retryErr)
+            }
+        }
+
         let finalContent = await buildOpenAIContentFromAccumulator(accumulator, enable_thinking)
         let toolCalls = []
         if (hasTools) {
@@ -424,6 +462,41 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
         const promptText = getPromptText(requestBody)
 
         await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef)
+
+        // Upstream error auto-retry: if upstream returned empty response or internal_error,
+        // retry once with a fresh request (different account via rotator)
+        const isUpstreamFailure = (
+            (accumulator.answer.length === 0 && accumulator.think.length === 0 && accumulator.unknown.length === 0) ||
+            accumulator.parseErrors.some(e => e.includes('internal_error'))
+        )
+        if (isUpstreamFailure) {
+            logger.warning?.(`上游返回空内容/internal_error，自动重试一次 (non-stream, raw_events=${accumulator.rawEvents.length}, parse_errors=${accumulator.parseErrors.length})`, 'CHAT')
+            try {
+                const retryResp = await sendChatRequest(requestBody)
+                if (retryResp.status && retryResp.response) {
+                    const retryAccumulator = createPhaseAccumulator()
+                    const retryTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
+                    await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, retryTokensRef)
+                    if (retryAccumulator.answer.length > 0 || retryAccumulator.unknown.length > 0) {
+                        accumulator.answer = retryAccumulator.answer
+                        accumulator.think = retryAccumulator.think
+                        accumulator.unknown = retryAccumulator.unknown
+                        accumulator.raw += retryAccumulator.raw
+                        accumulator.webSearchInfo = retryAccumulator.webSearchInfo || accumulator.webSearchInfo
+                        accumulator.imageMarkdownList = retryAccumulator.imageMarkdownList.length > 0 ? retryAccumulator.imageMarkdownList : accumulator.imageMarkdownList
+                        accumulator.parseErrors = retryAccumulator.parseErrors
+                        totalTokensRef.value = retryTokensRef.value
+                        logger.info?.('上游重试成功 (non-stream)', 'CHAT')
+                    } else {
+                        logger.warning?.('上游重试仍然失败 (non-stream)', 'CHAT')
+                        accumulator.raw += retryAccumulator.raw
+                        accumulator.parseErrors.push(...retryAccumulator.parseErrors)
+                    }
+                }
+            } catch (retryErr) {
+                logger.error('上游重试异常 (non-stream)', 'CHAT', '', retryErr)
+            }
+        }
 
         let assistantContent = await buildOpenAIContentFromAccumulator(accumulator, enable_thinking)
         let toolCalls = []
