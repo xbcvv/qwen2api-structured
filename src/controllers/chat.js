@@ -195,7 +195,7 @@ const buildOpenAIContentFromAccumulator = async (accumulator, enable_thinking) =
 
     return answerContent
 }
-const consumeUpstreamToAccumulator = (upstreamResponse, accumulator, totalTokensRef) => new Promise((resolve, reject) => {
+const consumeUpstreamToAccumulator = (upstreamResponse, accumulator, totalTokensRef, onDelta) => new Promise((resolve, reject) => {
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 
@@ -245,6 +245,7 @@ const consumeUpstreamToAccumulator = (upstreamResponse, accumulator, totalTokens
                 }
 
                 appendDeltaToAccumulator(accumulator, decodeJson.choices[0].delta)
+                try { if (onDelta) onDelta(decodeJson.choices[0].delta, decodeJson) } catch (_) { /* ignore callback failure */ }
             } catch (error) {
                 logger.error('SSE 数据结构化解析错误', 'CHAT', '', error)
             }
@@ -265,8 +266,8 @@ const getPromptText = (requestBody) => {
 
 /**
  * 处理流式响应
- * 策略：为兼容 AxonHub，立即发送 role + 零宽心跳；随后完整读取上游，结构化清洗后输出最终内容。
- * 这样既避免长时间无 SSE 内容被判 empty，也避免 think 内容提前泄漏。
+ * 策略：立即发送 role + 零宽心跳保底；同时实时转发 answer 阶段内容避免 AxonHub 判空；
+ * think 阶段默认缓冲，仅在 outThink=true 时在尾部追加。
  */
 const handleStreamResponse = async (res, response, enable_thinking, enable_web_search, requestBody = null, options = {}) => {
     try {
@@ -276,6 +277,8 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
         const accumulator = createPhaseAccumulator()
         const totalTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
         const promptText = getPromptText(requestBody)
+
+        let answerStreamed = false
 
         const writeJSON = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`)
         const baseChunk = () => ({
@@ -288,7 +291,16 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
         writeJSON({ ...baseChunk(), choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }] })
         writeJSON({ ...baseChunk(), choices: [{ index: 0, delta: { content: '\u200b' }, finish_reason: null }] })
 
-        await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef)
+        const onDelta = (delta) => {
+            try {
+                if (!delta || !delta.content) return
+                if (delta.phase === 'think') return
+                answerStreamed = true
+                writeJSON({ ...baseChunk(), choices: [{ index: 0, delta: { content: delta.content }, finish_reason: null }] })
+            } catch (_) { /* ignore stream write failure */ }
+        }
+
+        await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef, onDelta)
 
         let finalContent = await buildOpenAIContentFromAccumulator(accumulator, enable_thinking)
         let toolCalls = []
@@ -331,7 +343,30 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
             logger.warning?.(`流式响应内容为空，返回上游错误详情: ${finalContent}`, 'CHAT')
         }
 
-        if (finalContent) {
+        if (answerStreamed) {
+            const parts = []
+
+            if (config.outThink !== false && enable_thinking && accumulator.think && accumulator.think.trim()) {
+                let thinkContent = accumulator.think.trim()
+                if (accumulator.webSearchInfo) {
+                    const webSearchTable = await accountManager.generateMarkdownTable(accumulator.webSearchInfo, config.searchInfoMode)
+                    thinkContent = `${webSearchTable}\n\n${thinkContent}`
+                }
+                parts.push(`<think>\n\n${thinkContent}\n\n</think>`)
+            } else if ((config.outThink === false || !enable_thinking) && accumulator.webSearchInfo && config.searchInfoMode === 'text') {
+                const webSearchTable = await accountManager.generateMarkdownTable(accumulator.webSearchInfo, 'text')
+                parts.push(webSearchTable)
+            }
+
+            if (accumulator.imageMarkdownList.length > 0) {
+                parts.push(accumulator.imageMarkdownList.join('\n\n'))
+            }
+
+            const supplementary = parts.filter(Boolean).join('\n\n')
+            if (supplementary) {
+                writeJSON({ ...baseChunk(), choices: [{ index: 0, delta: { content: supplementary }, finish_reason: null }] })
+            }
+        } else if (finalContent) {
             writeJSON({ ...baseChunk(), choices: [{ index: 0, delta: { content: finalContent }, finish_reason: null }] })
         }
 
