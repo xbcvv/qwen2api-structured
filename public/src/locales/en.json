@@ -84,7 +84,10 @@
     "title": "Token Manager",
     "total": "total",
     "totalItems": "Total {n} items",
-    "chat": "test session"
+    "chat": "test session",
+    "editAccount": "Edit account",
+    "editAccountTitle": "Edit account info",
+    "editAccountHint": "Update account email, password, and account-level proxy. Empty proxy falls back to global proxy."
   },
   "lang": {
     "label": "🌐 Language / 语言",
@@ -124,7 +127,9 @@
     "refreshAllConfirm": "Are you sure you want to refresh the tokens for all accounts? \nThis may take some time.",
     "refreshAllFailed": "Batch refresh failed:",
     "refreshFailed": "Failed to refresh account token:",
-    "refreshSuccess": "Account {email} token refreshed successfully"
+    "refreshSuccess": "Account {email} token refreshed successfully",
+    "accountUpdateSuccess": "Account info updated",
+    "accountUpdateFailed": "Failed to update account info: "
   },
   "settings": {
     "add": "Add to",
@@ -216,7 +221,9 @@
     "confirmDeleteAdminKey": "Removing the admin key will fall back to the ADMIN_KEY environment variable (if configured). Continue?",
     "confirmRotateKey": "Rotating a key will invalidate the old one immediately and copy the new key. Continue?",
     "adminKeyRotated": "Admin key rotated and copied",
-    "adminKeyDeleted": "Admin key removed / restored to env"
+    "adminKeyDeleted": "Admin key removed / restored to env",
+    "globalProxySaved": "Global proxy saved",
+    "globalProxyFailed": "Failed to save global proxy: "
   },
   "stats": {
     "account": {

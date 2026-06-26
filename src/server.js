@@ -96,6 +96,9 @@ const applyPersistedSettings = async () => {
     if (persisted.apiKeys?.length > 0) {
       config.apiKeys = persisted.apiKeys.filter(key => key && key !== config.adminKey)
     }
+    if (persisted.proxyUrl !== undefined) {
+      config.proxyUrl = (typeof persisted.proxyUrl === 'string' && persisted.proxyUrl.trim()) ? persisted.proxyUrl.trim() : null
+    }
   } catch (err) {
     logger.warn('加载持久化设置失败, 使用 env/默认值', 'CONFIG', '', err.message)
   }

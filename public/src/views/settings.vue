@@ -88,6 +88,18 @@
 
                 <!-- 其他设置项 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 全局代理 -->
+                    <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
+                        <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl"></div>
+                        <div class="relative flex flex-col gap-2">
+                            <label class="text-gray-700 font-semibold">全局代理</label>
+                            <p class="text-xs text-gray-500">账号未配置专属代理时，默认使用这里的代理；支持 http://、https://、socks5://，留空表示不使用全局代理。</p>
+                            <input v-model="settings.proxyUrl" type="text" placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080"
+                                class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm focus:border-[#b56535] outline-none transition-all duration-300 h-12 text-sm px-4">
+                            <button @click="saveGlobalProxy"
+                                class="w-full mt-2 bg-[#b56535] text-white rounded-lg py-2 hover:bg-[#9f532d] border border-[#b56535] transition-all duration-300">{{ t('settings.save') }}</button>
+                        </div>
+                    </div>
                     <!-- 自动刷新 -->
                     <div class="setting-card relative overflow-hidden rounded-2xl p-6 flex flex-col gap-4 bg-white border border-[#e3ded6]">
                         <div class="absolute inset-0 bg-[#fdfcfa]/50 backdrop-blur-md border border-[#e3ded6]/60 rounded-2xl">
@@ -246,7 +258,8 @@ const settings = ref({
     simpleModelMap: false,
     chatStreamDefault: true,
     chatRetryCount: 1,
-    chatRetryBackoffMs: 400
+    chatRetryBackoffMs: 400,
+    proxyUrl: ''
 })
 
 const newApiKey = ref('')
@@ -279,8 +292,18 @@ const loadSettings = async () => {
         if (res.data.chatStreamDefault !== undefined) settings.value.chatStreamDefault = res.data.chatStreamDefault
         if (res.data.chatRetryCount !== undefined) settings.value.chatRetryCount = res.data.chatRetryCount
         if (res.data.chatRetryBackoffMs !== undefined) settings.value.chatRetryBackoffMs = res.data.chatRetryBackoffMs
+        settings.value.proxyUrl = res.data.proxyUrl || ''
     } catch (error) {
         console.error('loadSettings error:', error)
+    }
+}
+
+const saveGlobalProxy = async () => {
+    try {
+        await axios.post('/api/setGlobalProxy', { proxyUrl: settings.value.proxyUrl }, authHeaders())
+        alert(t('smsg.globalProxySaved') || '全局代理已保存')
+    } catch (error) {
+        alert((t('smsg.globalProxyFailed') || '全局代理保存失败：') + (error.response?.data?.error || error.message))
     }
 }
 

@@ -3,6 +3,7 @@ const router = express.Router()
 const config = require('../config')
 const DataPersistence = require('../utils/data-persistence')
 const { apiKeyVerify, adminKeyVerify } = require('../middlewares/authorization')
+const { isValidProxyUrl, invalidateProxyAgent } = require('../utils/proxy-helper')
 const { logger } = require('../utils/logger')
 
 const dataPersistence = new DataPersistence()
@@ -41,8 +42,26 @@ router.get('/settings', adminKeyVerify, async (req, res) => {
     simpleModelMap: config.simpleModelMap,
     chatRetryCount: config.chatRetryCount,
     chatRetryBackoffMs: config.chatRetryBackoffMs,
-    chatStreamDefault: config.chatStreamDefault
+    chatStreamDefault: config.chatStreamDefault,
+    proxyUrl: config.proxyUrl || ''
   })
+})
+
+router.post('/setGlobalProxy', adminKeyVerify, async (req, res) => {
+  try {
+    const normalizedProxy = (typeof req.body.proxyUrl === 'string' && req.body.proxyUrl.trim()) ? req.body.proxyUrl.trim() : null
+    if (normalizedProxy && !isValidProxyUrl(normalizedProxy)) {
+      return res.status(400).json({ error: '代理格式错误，仅支持 http://、https://、socks5:// 开头' })
+    }
+    const oldProxy = config.proxyUrl || null
+    config.proxyUrl = normalizedProxy
+    if (oldProxy && oldProxy !== normalizedProxy) invalidateProxyAgent(oldProxy)
+    const persisted = await dataPersistence.saveSettings({ proxyUrl: normalizedProxy })
+    res.json({ status: true, message: '全局代理设置更新成功', persisted, proxyUrl: normalizedProxy || '' })
+  } catch (error) {
+    logger.error('更新全局代理失败', 'CONFIG', '', error)
+    res.status(500).json({ error: error.message })
+  }
 })
 
 // 添加普通API Key

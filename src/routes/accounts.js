@@ -476,6 +476,35 @@ router.get('/batchTasks/:taskId', adminKeyVerify, async (req, res) => {
   res.json(getBatchTaskSnapshot(task))
 })
 
+router.post('/updateAccountInfo', adminKeyVerify, async (req, res) => {
+  try {
+    const { email, newEmail, password, proxy } = req.body
+    if (!email) return res.status(400).json({ error: '原邮箱不能为空' })
+    if (!newEmail || !String(newEmail).trim()) return res.status(400).json({ error: '邮箱不能为空' })
+    if (!password || !String(password).trim()) return res.status(400).json({ error: '密码不能为空' })
+
+    const normalizedProxy = (typeof proxy === 'string' && proxy.trim()) ? proxy.trim() : null
+    if (normalizedProxy && !isValidProxyUrl(normalizedProxy)) {
+      return res.status(400).json({ error: PROXY_FORMAT_ERROR })
+    }
+
+    const success = await accountManager.updateAccountInfo(email, {
+      email: String(newEmail).trim(),
+      password: String(password).trim(),
+      proxy: normalizedProxy
+    })
+
+    if (success) {
+      res.json({ message: '账号信息更新成功' })
+    } else {
+      res.status(500).json({ error: '账号信息更新失败，可能账号不存在或新邮箱已存在' })
+    }
+  } catch (error) {
+    logger.error('更新账号信息失败', 'ACCOUNT', '', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 /**
  * POST /updateAccountProxy
  * 更新账号专属代理 URL

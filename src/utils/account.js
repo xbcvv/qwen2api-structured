@@ -872,6 +872,58 @@ class Account {
     }
 
     /**
+     * 更新账户基础信息（邮箱/密码/代理），不重新登录；刷新令牌时会使用新密码
+     * @param {string} email - 原邮箱
+     * @param {{ email?: string, password?: string, proxy?: string|null }} updates
+     * @returns {Promise<boolean>}
+     */
+    async updateAccountInfo(email, updates = {}) {
+        try {
+            const index = this.accountTokens.findIndex(acc => acc.email === email)
+            if (index === -1) {
+                logger.warn(`账户 ${email} 不存在`, 'ACCOUNT')
+                return false
+            }
+
+            const account = this.accountTokens[index]
+            const oldSnapshot = { ...account }
+            const oldProxy = account.proxy || null
+            const nextEmail = (typeof updates.email === 'string' && updates.email.trim()) ? updates.email.trim() : account.email
+            const nextPassword = (typeof updates.password === 'string' && updates.password.trim()) ? updates.password.trim() : account.password
+            const nextProxy = (typeof updates.proxy === 'string' && updates.proxy.trim()) ? updates.proxy.trim() : null
+
+            if (nextEmail !== account.email && this.accountTokens.some((acc, i) => i !== index && acc.email === nextEmail)) {
+                logger.warn(`账户 ${nextEmail} 已存在`, 'ACCOUNT')
+                return false
+            }
+
+            account.email = nextEmail
+            account.password = nextPassword
+            account.proxy = nextProxy
+
+            const saved = await this.dataPersistence.saveAllAccounts(this.accountTokens)
+            if (!saved) {
+                this.accountTokens[index] = oldSnapshot
+                this.accountRotator.setAccounts(this.accountTokens)
+                logger.error(`账户 ${email} 信息持久化失败，已回滚`, 'ACCOUNT')
+                return false
+            }
+
+            this.accountRotator.setAccounts(this.accountTokens)
+            if (oldProxy && oldProxy !== nextProxy) {
+                const { invalidateProxyAgent } = require('./proxy-helper')
+                invalidateProxyAgent(oldProxy)
+            }
+
+            logger.success(`账户 ${email} 信息更新成功`, 'ACCOUNT')
+            return true
+        } catch (error) {
+            logger.error(`更新账户 ${email} 信息失败`, 'ACCOUNT', '', error)
+            return false
+        }
+    }
+
+    /**
      * 更新账户的代理 URL
      * 同时使旧 URL 对应的 agent 失效（释放底层 socket）
      * @param {string} email - 邮箱

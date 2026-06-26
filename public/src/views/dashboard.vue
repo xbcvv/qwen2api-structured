@@ -129,7 +129,7 @@
                     class="text-xs font-mono text-gray-600">{{ getCountdown(token.email) }}</span>
             </div>
             <div class="absolute inset-0 bg-white/30 backdrop-blur-md border border-white/30"></div>
-            <div class="relative p-3 flex flex-col gap-1.5">
+            <div class="relative p-3 pl-8 flex flex-col gap-1.5">
               <div class="flex flex-col gap-1">
                 <div class="dash-field-row">
                   <div class="overflow-x-auto scrollbar-hide flex-1 flex items-center space-x-2">
@@ -235,9 +235,9 @@
 
               <div class="pt-1.5 mt-auto border-t border-[#eee9e2]">
                 <div class="flex flex-row gap-1.5">
-                  <button @click="openEditProxy(token)"
+                  <button @click="openEditAccount(token)"
                           class="dash-card-btn bg-[#fff8f1] text-[#9f5930] hover:bg-[#f5e8d8] border border-[#e0d0bc]">
-                    {{ t('dash.editProxy') }}
+                    {{ t('dash.editAccount') || '修改账号' }}
                   </button>
                   <button @click="refreshToken(token.email)"
                           :disabled="refreshingTokens.includes(token.email)"
@@ -440,43 +440,47 @@
       </div>
     </div>
 
-    <!-- 修改代理模态框 -->
-    <div v-if="showEditProxyModal"
+    <!-- 修改账号模态框 -->
+    <div v-if="showEditAccountModal"
          class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-         @click.self="closeEditProxyModal">
+         @click.self="closeEditAccountModal">
       <div class="relative bg-white/90 backdrop-blur-lg rounded-2xl p-6 w-11/12 max-w-md transform transition-all duration-300 scale-100 opacity-100">
-        <h2 class="text-base font-bold text-[#2d2a24] mb-2">{{ t('dash.editProxyTitle') }}</h2>
-        <p class="text-sm text-gray-600 mb-4">{{ t('dash.editProxyHint') }}</p>
+        <h2 class="text-base font-bold text-[#2d2a24] mb-2">{{ t('dash.editAccountTitle') || '修改账号信息' }}</h2>
+        <p class="text-sm text-gray-600 mb-4">{{ t('dash.editAccountHint') || '可修改账号邮箱、密码和账号专属代理。代理为空时使用全局代理。' }}</p>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700">Email</label>
-            <div class="mt-1 px-4 py-2 rounded-xl bg-gray-100 text-gray-700">{{ editProxy.email }}</div>
+            <input v-model="editAccount.newEmail" type="email" :disabled="isSavingAccount" class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Password</label>
+            <input v-model="editAccount.password" type="text" :disabled="isSavingAccount" class="mt-1 block w-full rounded-xl border-[#ddd6cc] bg-white shadow-sm h-10 text-sm px-3">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">{{ t('dash.proxyLabel') }}</label>
-            <input v-model="editProxy.proxy" type="text" :placeholder="t('dash.proxyPlaceholder')"
-                   :disabled="isSavingProxy"
+            <input v-model="editAccount.proxy" type="text" :placeholder="t('dash.proxyPlaceholder')"
+                   :disabled="isSavingAccount"
                    :class="[
                      'mt-1 block w-full rounded-xl bg-white/50 shadow-sm transition-all duration-300 h-12 text-base px-4 disabled:opacity-70',
-                     editProxyValid
+                     editAccountProxyValid
                        ? 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
                        : 'border-red-400 focus:border-red-500 focus:ring-red-500'
                    ]">
-            <p v-if="!editProxyValid" class="mt-1 text-sm text-red-600">{{ t('msg.proxyInvalid') }}</p>
+            <p v-if="!editAccountProxyValid" class="mt-1 text-sm text-red-600">{{ t('msg.proxyInvalid') }}</p>
           </div>
           <div class="flex justify-end space-x-3 pt-2">
-            <button @click="closeEditProxyModal"
-                    :disabled="isSavingProxy"
+            <button @click="closeEditAccountModal"
+                    :disabled="isSavingAccount"
                     class="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-all duration-300 disabled:opacity-50">
               {{ t('dash.cancel') }}
             </button>
-            <button @click="clearProxy"
-                    :disabled="isSavingProxy"
+            <button @click="clearAccountProxy"
+                    :disabled="isSavingAccount"
                     class="px-4 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-all duration-300 disabled:opacity-50">
               {{ t('dash.clearProxy') }}
             </button>
-            <button @click="saveProxy"
-                    :disabled="isSavingProxy || !editProxyValid"
+            <button @click="saveAccountInfo"
+                    :disabled="isSavingAccount || !editAccountProxyValid"
                     class="px-4 py-2 rounded-xl bg-black text-white hover:bg-white hover:text-black border border-black transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
               {{ t('dash.save') }}
             </button>
@@ -523,9 +527,9 @@ const newAccount = ref({
   password: '',
   proxy: ''
 })
-const showEditProxyModal = ref(false)
-const editProxy = ref({ email: '', proxy: '' })
-const isSavingProxy = ref(false)
+const showEditAccountModal = ref(false)
+const editAccount = ref({ email: '', newEmail: '', password: '', proxy: '' })
+const isSavingAccount = ref(false)
 
 // 与后端 src/utils/proxy-helper.js#PROXY_URL_REGEX 保持一致
 const PROXY_URL_REGEX = /^(https?|socks5):\/\/[^\s]+$/i
@@ -536,7 +540,7 @@ const isValidProxy = (value) => {
   return PROXY_URL_REGEX.test(trimmed)
 }
 const newAccountProxyValid = computed(() => isValidProxy(newAccount.value.proxy))
-const editProxyValid = computed(() => isValidProxy(editProxy.value.proxy))
+const editAccountProxyValid = computed(() => isValidProxy(editAccount.value.proxy))
 
 const batchAccounts = ref('')
 const isBatchAdding = ref(false)
@@ -992,38 +996,46 @@ const addToken = async () => {
   }
 }
 
-const openEditProxy = (token) => {
-  editProxy.value = { email: token.email, proxy: token.proxy || '' }
-  showEditProxyModal.value = true
+const openEditAccount = (token) => {
+  editAccount.value = {
+    email: token.email,
+    newEmail: token.email,
+    password: token.password || '',
+    proxy: token.proxy || ''
+  }
+  showEditAccountModal.value = true
 }
 
-const closeEditProxyModal = () => {
-  if (isSavingProxy.value) return
-  showEditProxyModal.value = false
+const closeEditAccountModal = () => {
+  if (isSavingAccount.value) return
+  showEditAccountModal.value = false
 }
 
-const clearProxy = () => {
-  editProxy.value.proxy = ''
+const clearAccountProxy = () => {
+  editAccount.value.proxy = ''
 }
 
-const saveProxy = async () => {
-  if (isSavingProxy.value) return
-  isSavingProxy.value = true
+const saveAccountInfo = async () => {
+  if (isSavingAccount.value) return
+  isSavingAccount.value = true
   try {
-    await axios.post('/api/updateAccountProxy', {
-      email: editProxy.value.email,
-      proxy: editProxy.value.proxy.trim() || null
+    await axios.post('/api/updateAccountInfo', {
+      email: editAccount.value.email,
+      newEmail: editAccount.value.newEmail.trim(),
+      password: editAccount.value.password.trim(),
+      proxy: editAccount.value.proxy.trim() || null
     }, {
       headers: getAuthHeaders()
     })
-    showEditProxyModal.value = false
+    showEditAccountModal.value = false
     await getTokens()
-    showToast(t('msg.proxyUpdateSuccess'))
+    showToast(t('msg.accountUpdateSuccess') || '账号信息更新成功')
   } catch (error) {
-    console.error('saveProxy error:', error)
-    showToast(t('msg.proxyUpdateFailed') + error.message, 'error')
+    console.error('saveAccountInfo error:', error)
+    const message = error.response?.data?.error || error.message
+    showToast((t('msg.accountUpdateFailed') || '账号信息更新失败：') + message, 'error')
   } finally {
-    isSavingProxy.value = false
+    isSavingAccount.value = false
   }
 }
 
