@@ -302,41 +302,57 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
 
         await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef, onDelta)
 
-        // Upstream error auto-retry: if upstream returned empty response or internal_error,
-        // retry once with a fresh request (different account via rotator)
+        // Upstream error auto-retry: if upstream returned empty response, internal_error, or WAF challenge,
+        // retry up to 2 times: first with same payload, then with truncated system prompt
+        const isWafResponse = accumulator.raw.includes('sessionStorage.x5referer') || accumulator.raw.includes('_____tmd_____')
         const isUpstreamFailure = (
+            isWafResponse ||
             (accumulator.answer.length === 0 && accumulator.think.length === 0 && accumulator.unknown.length === 0) ||
             accumulator.parseErrors.some(e => e.includes('internal_error'))
         )
         if (isUpstreamFailure) {
-            logger.warning?.(`上游返回空内容/internal_error，自动重试一次 (raw_events=${accumulator.rawEvents.length}, parse_errors=${accumulator.parseErrors.length})`, 'CHAT')
-            try {
-                const retryResp = await sendChatRequest(requestBody)
-                if (retryResp.status && retryResp.response) {
-                    const retryAccumulator = createPhaseAccumulator()
-                    const retryTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
-                    await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, retryTokensRef, onDelta)
-                    // If retry succeeded, merge results
-                    if (retryAccumulator.answer.length > 0 || retryAccumulator.unknown.length > 0) {
-                        accumulator.answer = retryAccumulator.answer
-                        accumulator.think = retryAccumulator.think
-                        accumulator.unknown = retryAccumulator.unknown
-                        accumulator.raw += retryAccumulator.raw
-                        accumulator.webSearchInfo = retryAccumulator.webSearchInfo || accumulator.webSearchInfo
-                        accumulator.imageMarkdownList = retryAccumulator.imageMarkdownList.length > 0 ? retryAccumulator.imageMarkdownList : accumulator.imageMarkdownList
-                        accumulator.parseErrors = retryAccumulator.parseErrors
-                        totalTokensRef.value = retryTokensRef.value
-                        logger.info?.('上游重试成功', 'CHAT')
-                    } else {
-                        logger.warning?.('上游重试仍然失败', 'CHAT')
+            const maxRetries = 2
+            for (let retryAttempt = 1; retryAttempt <= maxRetries; retryAttempt++) {
+                // On second retry, truncate system prompt to avoid WAF
+                let retryBody = requestBody
+                if (retryAttempt === 2 && requestBody?.messages?.length > 0 && requestBody.messages[0].role === 'system') {
+                    const sysContent = requestBody.messages[0].content
+                    if (sysContent && sysContent.length > 15000) {
+                        const truncated = sysContent.substring(0, 15000) + '\n\n[system prompt truncated for upstream compatibility]'
+                        retryBody = { ...requestBody, messages: [{ ...requestBody.messages[0], content: truncated }, ...requestBody.messages.slice(1)] }
+                        logger.warning?.(`系统提示过长(${sysContent.length} chars)，截断至 15000 chars 后重试`, 'CHAT')
+                    }
+                }
+                logger.warning?.(`上游返回${isWafResponse ? 'WAF挑战' : '空内容/internal_error'}，自动重试 (${retryAttempt}/${maxRetries})`, 'CHAT')
+                try {
+                    if (retryAttempt > 1) await new Promise(r => setTimeout(r, 1000))
+                    const retryResp = await sendChatRequest(retryBody)
+                    if (retryResp.status && retryResp.response) {
+                        const retryAccumulator = createPhaseAccumulator()
+                        const retryTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
+                        await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, retryTokensRef, onDelta)
+                        const retryIsWaf = retryAccumulator.raw.includes('sessionStorage.x5referer') || retryAccumulator.raw.includes('_____tmd_____')
+                        if (!retryIsWaf && (retryAccumulator.answer.length > 0 || retryAccumulator.unknown.length > 0)) {
+                            accumulator.answer = retryAccumulator.answer
+                            accumulator.think = retryAccumulator.think
+                            accumulator.unknown = retryAccumulator.unknown
+                            accumulator.raw += retryAccumulator.raw
+                            accumulator.webSearchInfo = retryAccumulator.webSearchInfo || accumulator.webSearchInfo
+                            accumulator.imageMarkdownList = retryAccumulator.imageMarkdownList.length > 0 ? retryAccumulator.imageMarkdownList : accumulator.imageMarkdownList
+                            accumulator.parseErrors = retryAccumulator.parseErrors
+                            totalTokensRef.value = retryTokensRef.value
+                            logger.info?.(`上游重试成功 (attempt ${retryAttempt})`, 'CHAT')
+                            break
+                        }
+                        logger.warning?.(`上游重试仍然失败 (${retryAttempt}/${maxRetries}${retryIsWaf ? ', WAF' : ''})`, 'CHAT')
                         accumulator.raw += retryAccumulator.raw
                         accumulator.parseErrors.push(...retryAccumulator.parseErrors)
+                    } else {
+                        logger.warning?.(`上游重试请求失败 (${retryAttempt}/${maxRetries})`, 'CHAT')
                     }
-                } else {
-                    logger.warning?.('上游重试请求失败（无法获取连接）', 'CHAT')
+                } catch (retryErr) {
+                    logger.error(`上游重试异常 (${retryAttempt}/${maxRetries})`, 'CHAT', '', retryErr)
                 }
-            } catch (retryErr) {
-                logger.error('上游重试异常', 'CHAT', '', retryErr)
             }
         }
 
@@ -463,38 +479,56 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
 
         await consumeUpstreamToAccumulator(response, accumulator, totalTokensRef)
 
-        // Upstream error auto-retry: if upstream returned empty response or internal_error,
-        // retry once with a fresh request (different account via rotator)
+        // Upstream error auto-retry: if upstream returned empty response, internal_error, or WAF challenge,
+        // retry up to 2 times: first with same payload, then with truncated system prompt
+        const isWafResponse = accumulator.raw.includes('sessionStorage.x5referer') || accumulator.raw.includes('_____tmd_____')
         const isUpstreamFailure = (
+            isWafResponse ||
             (accumulator.answer.length === 0 && accumulator.think.length === 0 && accumulator.unknown.length === 0) ||
             accumulator.parseErrors.some(e => e.includes('internal_error'))
         )
         if (isUpstreamFailure) {
-            logger.warning?.(`上游返回空内容/internal_error，自动重试一次 (non-stream, raw_events=${accumulator.rawEvents.length}, parse_errors=${accumulator.parseErrors.length})`, 'CHAT')
-            try {
-                const retryResp = await sendChatRequest(requestBody)
-                if (retryResp.status && retryResp.response) {
-                    const retryAccumulator = createPhaseAccumulator()
-                    const retryTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
-                    await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, retryTokensRef)
-                    if (retryAccumulator.answer.length > 0 || retryAccumulator.unknown.length > 0) {
-                        accumulator.answer = retryAccumulator.answer
-                        accumulator.think = retryAccumulator.think
-                        accumulator.unknown = retryAccumulator.unknown
-                        accumulator.raw += retryAccumulator.raw
-                        accumulator.webSearchInfo = retryAccumulator.webSearchInfo || accumulator.webSearchInfo
-                        accumulator.imageMarkdownList = retryAccumulator.imageMarkdownList.length > 0 ? retryAccumulator.imageMarkdownList : accumulator.imageMarkdownList
-                        accumulator.parseErrors = retryAccumulator.parseErrors
-                        totalTokensRef.value = retryTokensRef.value
-                        logger.info?.('上游重试成功 (non-stream)', 'CHAT')
-                    } else {
-                        logger.warning?.('上游重试仍然失败 (non-stream)', 'CHAT')
-                        accumulator.raw += retryAccumulator.raw
-                        accumulator.parseErrors.push(...retryAccumulator.parseErrors)
+            const maxRetries = 2
+            for (let retryAttempt = 1; retryAttempt <= maxRetries; retryAttempt++) {
+                let retryBody = requestBody
+                if (retryAttempt === 2 && requestBody?.messages?.length > 0 && requestBody.messages[0].role === 'system') {
+                    const sysContent = requestBody.messages[0].content
+                    if (sysContent && sysContent.length > 15000) {
+                        const truncated = sysContent.substring(0, 15000) + '\n\n[system prompt truncated for upstream compatibility]'
+                        retryBody = { ...requestBody, messages: [{ ...requestBody.messages[0], content: truncated }, ...requestBody.messages.slice(1)] }
+                        logger.warning?.(`系统提示过长(${sysContent.length} chars)，截断至 15000 chars 后重试`, 'CHAT')
                     }
                 }
-            } catch (retryErr) {
-                logger.error('上游重试异常 (non-stream)', 'CHAT', '', retryErr)
+                logger.warning?.(`上游返回${isWafResponse ? 'WAF挑战' : '空内容/internal_error'}，自动重试 (${retryAttempt}/${maxRetries})`, 'CHAT')
+                try {
+                    if (retryAttempt > 1) await new Promise(r => setTimeout(r, 1000))
+                    const retryResp = await sendChatRequest(retryBody)
+                    if (retryResp.status && retryResp.response) {
+                        const retryAccumulator = createPhaseAccumulator()
+                        const retryTokensRef = { value: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } }
+                        await consumeUpstreamToAccumulator(retryResp.response, retryAccumulator, retryTokensRef)
+                        const retryIsWaf = retryAccumulator.raw.includes('sessionStorage.x5referer') || retryAccumulator.raw.includes('_____tmd_____')
+                        if (!retryIsWaf && (retryAccumulator.answer.length > 0 || retryAccumulator.unknown.length > 0)) {
+                            accumulator.answer = retryAccumulator.answer
+                            accumulator.think = retryAccumulator.think
+                            accumulator.unknown = retryAccumulator.unknown
+                            accumulator.raw += retryAccumulator.raw
+                            accumulator.webSearchInfo = retryAccumulator.webSearchInfo || accumulator.webSearchInfo
+                            accumulator.imageMarkdownList = retryAccumulator.imageMarkdownList.length > 0 ? retryAccumulator.imageMarkdownList : accumulator.imageMarkdownList
+                            accumulator.parseErrors = retryAccumulator.parseErrors
+                            totalTokensRef.value = retryTokensRef.value
+                            logger.info?.(`上游重试成功 (non-stream, attempt ${retryAttempt})`, 'CHAT')
+                            break
+                        }
+                        logger.warning?.(`上游重试仍然失败 (non-stream, ${retryAttempt}/${maxRetries}${retryIsWaf ? ', WAF' : ''})`, 'CHAT')
+                        accumulator.raw += retryAccumulator.raw
+                        accumulator.parseErrors.push(...retryAccumulator.parseErrors)
+                    } else {
+                        logger.warning?.(`上游重试请求失败 (non-stream, ${retryAttempt}/${maxRetries})`, 'CHAT')
+                    }
+                } catch (retryErr) {
+                    logger.error(`上游重试异常 (non-stream, ${retryAttempt}/${maxRetries})`, 'CHAT', '', retryErr)
+                }
             }
         }
 
