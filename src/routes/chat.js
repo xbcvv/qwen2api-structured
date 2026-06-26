@@ -1,6 +1,8 @@
 const express = require('express')
 const multer = require('multer')
 const axios = require('axios')
+const dns = require('dns').promises
+const net = require('net')
 const router = express.Router()
 const { apiKeyVerify } = require('../middlewares/authorization.js')
 const { processRequestBody } = require('../middlewares/chat-middleware.js')
@@ -38,6 +40,34 @@ const selectChatCompletion = (req, res, next) => {
     }
 }
 
+const isPrivateIp = (ip) => {
+    if (!ip) return true
+    if (net.isIP(ip) === 4) {
+        const parts = ip.split('.').map(Number)
+        return parts[0] === 10 ||
+            parts[0] === 127 ||
+            parts[0] === 0 ||
+            (parts[0] === 169 && parts[1] === 254) ||
+            (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+            (parts[0] === 192 && parts[1] === 168)
+    }
+    if (net.isIP(ip) === 6) {
+        const lower = ip.toLowerCase()
+        return lower === '::1' || lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80:')
+    }
+    return true
+}
+
+const assertSafeImageUrl = async (rawUrl) => {
+    const parsed = new URL(rawUrl)
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Invalid protocol')
+    const records = await dns.lookup(parsed.hostname, { all: true })
+    if (!records.length || records.some(record => isPrivateIp(record.address))) {
+        throw new Error('Unsafe image host')
+    }
+    return parsed.toString()
+}
+
 router.post('/v1/chat/completions',
     apiKeyVerify,
     processRequestBody,
@@ -45,15 +75,12 @@ router.post('/v1/chat/completions',
 )
 
 router.get('/v1/image-proxy',
-    apiKeyVerify,
     async (req, res) => {
         try {
             const rawUrl = String(req.query.url || '')
-            if (!rawUrl || !/^https?:\/\//i.test(rawUrl)) {
-                return res.status(400).json({ error: 'Invalid image url' })
-            }
+            const safeUrl = await assertSafeImageUrl(rawUrl)
 
-            const upstream = await axios.get(rawUrl, {
+            const upstream = await axios.get(safeUrl, {
                 responseType: 'stream',
                 timeout: 30000,
                 maxRedirects: 5,

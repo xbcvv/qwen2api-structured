@@ -1,9 +1,5 @@
 <template>
   <div class="chat page-fill flex flex-col items-center overflow-hidden">
-    <div class="chat-header shrink-0 p-4 bg-[#f7f6f3] border-b border-[#e3ded6] w-full flex justify-between text-sm text-gray-700">
-      <span>Qwen</span>
-      <span>{{ t("chat.title") }}</span>
-    </div>
     <div class="chat-messages min-h-0 flex-1 overflow-y-auto max-w-5xl w-full">
       <div
         v-for="(message, index) in state.messages"
