@@ -2,7 +2,7 @@
 
 # 🚀 Qwen-Proxy
 
-[![Version](https://img.shields.io/badge/version-2026.06.25-blue.svg)](https://github.com/xbcvv/qwen2api-structured)
+[![Version](https://img.shields.io/badge/version-2026.06.16-blue.svg)](https://github.com/xbcvv/qwen2api-structured)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/Docker-supported-blue.svg)](https://docs.docker.com/get-docker/)
 
@@ -371,6 +371,7 @@ qwen2api-structured/
 │   │   ├── anthropic.js                 # Anthropic 兼容路由
 │   │   ├── cli.chat.js                  # CLI 路由
 │   │   ├── models.js                    # 模型路由
+│   │   ├── request-logs.js              # 请求日志路由
 │   │   ├── settings.js                  # 系统设置路由
 │   │   └── verify.js                    # 登录验证路由
 │   └── utils/
@@ -390,6 +391,9 @@ qwen2api-structured/
 │       ├── proxy-helper.js              # 代理辅助
 │       ├── redis.js                     # Redis 连接
 │       ├── request.js                   # HTTP 请求封装
+│       ├── request-log.js               # 请求日志记录
+│       ├── request-queue.js             # 并发请求队列
+│       ├── message-compressor.js        # 消息压缩器
 │       ├── setting.js                   # 设置管理
 │       ├── ssxmod-manager.js            # ssxmod 参数管理
 │       ├── token-manager.js             # Token 管理器
@@ -517,9 +521,7 @@ Authorization: Bearer sk-your-api-key
       "content": "你好，请介绍一下自己。"
     }
   ],
-  "stream": false,
-  "temperature": 0.7,
-  "max_tokens": 2000
+  "stream": false
 }
 ```
 
@@ -547,6 +549,9 @@ Authorization: Bearer sk-your-api-key
   }
 }
 ```
+
+**说明:**
+请求体中可传入 OpenAI 格式参数（如 `temperature`、`top_p`、`max_tokens` 等），但本服务在转换为 Qwen Web 上游格式时**仅使用 `messages`、`model`、`stream`、`enable_thinking`、`thinking_budget`、`tools`、`tool_choice`、`size`**；其他参数不传递给上游，会被忽略。如需调节生成行为，请使用模型名后缀（`-thinking`、`-search` 等）或 `enable_thinking` 字段。
 
 ### 🛠️ Function Calling（工具调用）
 
