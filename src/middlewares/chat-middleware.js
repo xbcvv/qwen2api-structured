@@ -2,6 +2,7 @@ const { generateUUID } = require('../utils/tools.js')
 const { isChatType, isThinkingEnabled, parserModel, parserMessages } = require('../utils/chat-helpers.js')
 const { buildToolSystemPrompt, foldToolMessages } = require('../utils/tool-prompt.js')
 const { logger } = require('../utils/logger')
+const { compressMessages } = require('../utils/message-compressor.js')
 
 /**
  * 处理聊天请求体的中间件
@@ -64,6 +65,27 @@ const processRequestBody = async (req, res, next) => {
       body.stream = true
     } else {
       body.stream = false
+    }
+
+    // 在进入 Qwen 格式转换前，先压缩 OpenAI 格式的 messages
+    // 避免大 payload（>100条消息、33K system prompt、11个 tools）触发 Qwen WAF
+    if (messages && messages.length > 30) {
+      const compressedMessages = compressMessages(messages)
+      if (compressedMessages.length !== messages.length) {
+        logger.info(`中间件消息压缩: ${messages.length} 条 → ${compressedMessages.length} 条`, 'MIDDLEWARE')
+      }
+      messages = compressedMessages
+      // 同步处理 tools（如果很多）
+      if (Array.isArray(tools) && tools.length > 5) {
+        tools = tools.map(t => {
+          if (!t.function?.description) return t
+          if (t.function.description.length > 200) {
+            return { ...t, function: { ...t.function, description: t.function.description.substring(0, 200) + '...' } }
+          }
+          return t
+        })
+        logger.info(`中间件 tools 压缩: ${tools.length} 个`, 'MIDDLEWARE')
+      }
     }
 
     // 处理 tools 参数 : 通过提示词为网页版模型注入工具调用能力
