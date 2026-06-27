@@ -19,14 +19,32 @@
 
 - 新增 `src/utils/answer-extractor.js`：统一清洗 `<think>...</think>` 残留块与常见 reasoning 前缀。
 - 重构 `src/controllers/chat.js`：OpenAI `stream` / `non-stream` 路径统一走 phase accumulator。
+- 新增 `src/utils/message-compressor.js`：参考 GLM `convert_messages()` 思路，在 OpenAI messages 转 Qwen 原生格式前压缩上下文，降低 Qwen Web WAF/空流触发率。
+- 新增 `src/utils/request-queue.js`：上游请求并发队列，默认限制同时 5 个请求，避免多请求打爆 Qwen Web 上游或单账号。
+- 增强 `src/utils/request.js`：请求链路支持账号 failover，单次请求最多尝试多个账号，失败后自动切换。
+- 在 `src/middlewares/chat-middleware.js` 中前置压缩：大历史消息、长 system prompt、tools description 会在进入 Qwen 格式转换前降载。
 - 上游 SSE delta 先进入独立 buffer：
   - `think`：思考过程
   - `answer`：最终回答
   - `unknown`：兼容未知阶段
   - `raw`：仅用于 token 估算与排障
 - 当 `OUTPUT_THINK=false` 时，对外只返回 answer，不输出 think。
-- 保留 OpenAI `tools` / `tool_choice=required` 能力，已验证 stream 与 non-stream tool_calls。
+- 保留 OpenAI `tools` / `tool_choice=required` 能力；大 payload 场景下 tools 说明会被压缩，必要时作为 WAF 兜底降级。
 - 为防止思考内容在流式模式提前泄漏，OpenAI stream 路径采用“上游完整读取 → 结构化清洗 → SSE 输出最终结果”的策略。
+
+### Qwen Web WAF 降载与稳定性优化
+
+Qwen Web 上游对超大 payload、超长 system prompt、密集工具定义或高并发请求较敏感，可能出现 `_____tmd_____/punish`、`internal_error`、SSE 空流等问题。本分支增加了面向 OpenAI 兼容请求的降载层：
+
+- **消息压缩前置**：在 `chat-middleware` 中、OpenAI messages 转 Qwen 原生格式之前执行。
+- **system prompt 压缩**：长 system prompt 会保留核心规则并截断冗余段落。
+- **历史消息折叠**：过多历史消息会合并/截断，旧消息以摘要形式注入。
+- **tools 降载**：过长 tool description 会截断；极端大 payload 场景下可作为兜底删除 tools，优先保证请求可用。
+- **并发队列**：`request-queue.js` 默认最多 5 个上游并发请求，其他请求排队等待。
+- **账号 failover**：请求失败时自动切换账号重试，降低单账号异常导致的失败率。
+- **WAF/空流兜底**：检测上游空流、`internal_error`、WAF challenge，并执行重试/截断降级。
+
+已验证场景：145 条 messages + 11 个 tools 的大请求可从约 298KB 降到约 70KB，并成功返回。该优化是兼容性降级策略，极端情况下可能牺牲部分早期上下文或 tools 详细说明。
 
 ### 默认安全配置
 
