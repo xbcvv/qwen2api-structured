@@ -153,19 +153,53 @@ function estimatePayloadSize(messages) {
 }
 
 /**
- * 主压缩函数
- * @param {Array} messages - OpenAI 格式消息数组
- * @param {Object} options - 可选配置覆盖
- * @returns {Array} 压缩后的消息数组
+ * 压缩 tools 定义
+ * 删除冗余的 description，只保留必要信息
  */
-function compressMessages(messages, options = {}) {
-    if (!messages || messages.length === 0) return messages
+function compressTools(tools) {
+    if (!tools || !Array.isArray(tools) || tools.length === 0) return tools
+    
+    return tools.map(tool => {
+        if (!tool.function) return tool
+        const fn = { ...tool.function }
+        // 如果 description 超过 200 字符，截断
+        if (fn.description && fn.description.length > 200) {
+            fn.description = fn.description.substring(0, 200) + '...'
+        }
+        return { ...tool, function: fn }
+    })
+}
+
+/**
+ * 估算 payload 总大小（字节）
+ */
+function estimatePayloadSize(body) {
+    let total = 0
+    if (body.messages) {
+        for (const msg of body.messages) {
+            const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+            total += content.length * 2
+            if (msg.tool_calls) total += JSON.stringify(msg.tool_calls).length * 2
+        }
+    }
+    if (body.tools) total += JSON.stringify(body.tools).length * 2
+    return total
+}
+
+/**
+ * 主压缩函数
+ * @param {Object} body - 完整请求体（含 messages + tools）
+ * @param {Object} options - 可选配置覆盖
+ * @returns {Object} 压缩后的请求体
+ */
+function compressPayload(body, options = {}) {
+    if (!body || !body.messages || body.messages.length === 0) return body
 
     const config = { ...DEFAULT_CONFIG, ...options }
-    let result = [...messages]
+    let messages = [...body.messages]
 
     // 1. 压缩 system prompt
-    result = result.map(msg => {
+    messages = messages.map(msg => {
         if (msg.role === 'system') {
             return { ...msg, content: compressSystemPrompt(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)) }
         }
@@ -173,37 +207,56 @@ function compressMessages(messages, options = {}) {
     })
 
     // 2. 压缩工具结果
-    result = compressToolResults(result)
+    messages = compressToolResults(messages)
 
     // 3. 合并相邻同角色
-    result = mergeAdjacentRoleMessages(result)
+    messages = mergeAdjacentRoleMessages(messages)
 
     // 4. 截断老消息
-    result = truncateOldMessages(result, config.maxMessages)
+    messages = truncateOldMessages(messages, config.maxMessages)
 
     // 5. 检查总大小，如果还是太大，继续压缩
+    let result = { ...body, messages }
     const size = estimatePayloadSize(result)
     if (size > config.maxTotalPayloadSize) {
         logger.warn(`消息压缩后仍超过大小限制: ${size} > ${config.maxTotalPayloadSize}，进行二次压缩`, 'COMPRESS')
         // 进一步减少消息数量
-        const systemMsg = result[0].role === 'system' ? result[0] : null
-        const nonSystem = systemMsg ? result.slice(1) : result
+        const systemMsg = messages[0].role === 'system' ? messages[0] : null
+        const nonSystem = systemMsg ? messages.slice(1) : messages
         const keep = Math.max(10, Math.floor(nonSystem.length * 0.5))
-        result = systemMsg
+        messages = systemMsg
             ? [systemMsg, ...nonSystem.slice(-keep)]
             : nonSystem.slice(-keep)
+        result = { ...result, messages }
     }
 
-    const originalSize = estimatePayloadSize(messages)
+    // 6. 压缩 tools（如果还存在）
+    if (result.tools && result.tools.length > 0) {
+        const sizeWithTools = estimatePayloadSize(result)
+        if (sizeWithTools > config.maxTotalPayloadSize) {
+            logger.warn(`压缩后仍超限(${sizeWithTools} bytes)，删除 tools`, 'COMPRESS')
+            result = { ...result, tools: [] }
+        } else {
+            result = { ...result, tools: compressTools(result.tools) }
+        }
+    }
+
+    const originalSize = estimatePayloadSize(body)
     const finalSize = estimatePayloadSize(result)
     if (originalSize !== finalSize) {
-        logger.info(`消息压缩: ${messages.length} 条 → ${result.length} 条, ${originalSize} → ${finalSize} 字节`, 'COMPRESS')
+        logger.info(`消息压缩: ${body.messages.length} 条 → ${result.messages.length} 条, ${originalSize} → ${finalSize} 字节`, 'COMPRESS')
     }
 
     return result
 }
 
+// 向后兼容：旧接口调用 compressMessages 时返回 messages 数组
+function compressMessages(messages, options = {}) {
+    return compressPayload({ messages }, options).messages
+}
+
 module.exports = {
+    compressPayload,
     compressMessages,
     compressSystemPrompt,
     mergeAdjacentRoleMessages,

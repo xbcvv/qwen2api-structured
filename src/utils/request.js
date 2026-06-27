@@ -5,7 +5,7 @@ const { logger } = require('./logger')
 const { getSsxmodItna, getSsxmodItna2 } = require('./ssxmod-manager')
 const { getProxyAgent, getChatBaseUrl, applyProxyToAxiosConfig } = require('./proxy-helper')
 const { generateUUID } = require('./tools.js')
-const { compressMessages } = require('./message-compressor.js')
+const { compressPayload } = require('./message-compressor.js')
 const { defaultQueue } = require('./request-queue.js')
 
 // 传输层（非 HTTP）错误码 — 这些重试的, HTTP 响应不重试
@@ -105,13 +105,10 @@ async function tryAccount(account, payload) {
  * @returns {Promise<Object>} 响应结果
  */
 const sendChatRequest = async (body, options = {}) => {
-    // 1. 消息压缩（除非明确跳过）
+    // 1. 完整 payload 压缩（除非明确跳过）
     let processedBody = body
     if (!options.skipCompress && body?.messages?.length > 5) {
-        const compressed = compressMessages(body.messages)
-        if (compressed.length !== body.messages.length) {
-            processedBody = { ...body, messages: compressed }
-        }
+        processedBody = compressPayload(body)
     }
 
     // 2. 获取可用账户列表
