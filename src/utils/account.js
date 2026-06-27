@@ -508,6 +508,15 @@ class Account {
     }
 
     /**
+     * 获取可用账户数量
+     * @returns {number}
+     */
+    getAccountCount() {
+        if (!this.isInitialized || !Array.isArray(this.accountTokens)) return 0
+        return this.accountTokens.length
+    }
+
+    /**
      * 根据邮箱获取特定账户对象
      * @param {string} email - 邮箱地址
      * @returns {Object|null} 账户对象或 null

@@ -320,10 +320,10 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
                     if (sysContent && sysContent.length > 15000) {
                         const truncated = sysContent.substring(0, 15000) + '\n\n[system prompt truncated for upstream compatibility]'
                         retryBody = { ...requestBody, messages: [{ ...requestBody.messages[0], content: truncated }, ...requestBody.messages.slice(1)] }
-                        logger.warning?.(`系统提示过长(${sysContent.length} chars)，截断至 15000 chars 后重试`, 'CHAT')
+                        logger.warn(`系统提示过长(${sysContent.length} chars)，截断至 15000 chars 后重试`, 'CHAT')
                     }
                 }
-                logger.warning?.(`上游返回${isWafResponse ? 'WAF挑战' : '空内容/internal_error'}，自动重试 (${retryAttempt}/${maxRetries})`, 'CHAT')
+                logger.warn(`上游返回${isWafResponse ? 'WAF挑战' : '空内容/internal_error'}，自动重试 (${retryAttempt}/${maxRetries})`, 'CHAT')
                 try {
                     if (retryAttempt > 1) await new Promise(r => setTimeout(r, 1000))
                     const retryResp = await sendChatRequest(retryBody)
@@ -344,11 +344,11 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
                             logger.info?.(`上游重试成功 (attempt ${retryAttempt})`, 'CHAT')
                             break
                         }
-                        logger.warning?.(`上游重试仍然失败 (${retryAttempt}/${maxRetries}${retryIsWaf ? ', WAF' : ''})`, 'CHAT')
+                        logger.warn(`上游重试仍然失败 (${retryAttempt}/${maxRetries}${retryIsWaf ? ', WAF' : ''})`, 'CHAT')
                         accumulator.raw += retryAccumulator.raw
                         accumulator.parseErrors.push(...retryAccumulator.parseErrors)
                     } else {
-                        logger.warning?.(`上游重试请求失败 (${retryAttempt}/${maxRetries})`, 'CHAT')
+                        logger.warn(`上游重试请求失败 (${retryAttempt}/${maxRetries})`, 'CHAT')
                     }
                 } catch (retryErr) {
                     logger.error(`上游重试异常 (${retryAttempt}/${maxRetries})`, 'CHAT', '', retryErr)
@@ -373,7 +373,7 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
                     { role: 'system', content: retryHint }
                 ]
             }
-            logger.warning?.('tool_choice=required 首次未触发工具调用，进行一次重试', 'CHAT')
+            logger.warn('tool_choice=required 首次未触发工具调用，进行一次重试', 'CHAT')
             try {
                 const retryResp = await sendChatRequest(retryBody)
                 if (retryResp.status && retryResp.response) {
@@ -394,7 +394,7 @@ const handleStreamResponse = async (res, response, enable_thinking, enable_web_s
 
         if (!finalContent && toolCalls.length === 0) {
             finalContent = buildUpstreamErrorMessage(accumulator, totalTokensRef.value)
-            logger.warning?.(`流式响应内容为空，返回上游错误详情: ${finalContent}`, 'CHAT')
+            logger.warn(`流式响应内容为空，返回上游错误详情: ${finalContent}`, 'CHAT')
         }
 
         if (answerStreamed) {
@@ -496,10 +496,10 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
                     if (sysContent && sysContent.length > 15000) {
                         const truncated = sysContent.substring(0, 15000) + '\n\n[system prompt truncated for upstream compatibility]'
                         retryBody = { ...requestBody, messages: [{ ...requestBody.messages[0], content: truncated }, ...requestBody.messages.slice(1)] }
-                        logger.warning?.(`系统提示过长(${sysContent.length} chars)，截断至 15000 chars 后重试`, 'CHAT')
+                        logger.warn(`系统提示过长(${sysContent.length} chars)，截断至 15000 chars 后重试`, 'CHAT')
                     }
                 }
-                logger.warning?.(`上游返回${isWafResponse ? 'WAF挑战' : '空内容/internal_error'}，自动重试 (${retryAttempt}/${maxRetries})`, 'CHAT')
+                logger.warn(`上游返回${isWafResponse ? 'WAF挑战' : '空内容/internal_error'}，自动重试 (${retryAttempt}/${maxRetries})`, 'CHAT')
                 try {
                     if (retryAttempt > 1) await new Promise(r => setTimeout(r, 1000))
                     const retryResp = await sendChatRequest(retryBody)
@@ -520,11 +520,11 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
                             logger.info?.(`上游重试成功 (non-stream, attempt ${retryAttempt})`, 'CHAT')
                             break
                         }
-                        logger.warning?.(`上游重试仍然失败 (non-stream, ${retryAttempt}/${maxRetries}${retryIsWaf ? ', WAF' : ''})`, 'CHAT')
+                        logger.warn(`上游重试仍然失败 (non-stream, ${retryAttempt}/${maxRetries}${retryIsWaf ? ', WAF' : ''})`, 'CHAT')
                         accumulator.raw += retryAccumulator.raw
                         accumulator.parseErrors.push(...retryAccumulator.parseErrors)
                     } else {
-                        logger.warning?.(`上游重试请求失败 (non-stream, ${retryAttempt}/${maxRetries})`, 'CHAT')
+                        logger.warn(`上游重试请求失败 (non-stream, ${retryAttempt}/${maxRetries})`, 'CHAT')
                     }
                 } catch (retryErr) {
                     logger.error(`上游重试异常 (non-stream, ${retryAttempt}/${maxRetries})`, 'CHAT', '', retryErr)
@@ -549,7 +549,7 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
                     { role: 'system', content: retryHint }
                 ]
             }
-            logger.warning?.('tool_choice=required 首次未触发工具调用，进行一次重试', 'CHAT')
+            logger.warn('tool_choice=required 首次未触发工具调用，进行一次重试', 'CHAT')
             try {
                 const retryResp = await sendChatRequest(retryBody)
                 if (retryResp.status && retryResp.response) {
@@ -583,7 +583,7 @@ const handleNonStreamResponse = async (res, response, enable_thinking, enable_we
         // Fallback for empty response: return upstream details, not a generic local message
         if (!assistantContent && toolCalls.length === 0) {
             assistantContent = buildUpstreamErrorMessage(accumulator, totalTokens)
-            logger.warning?.(`非流式响应内容为空，返回上游错误详情: ${assistantContent}`, 'CHAT')
+            logger.warn(`非流式响应内容为空，返回上游错误详情: ${assistantContent}`, 'CHAT')
         }
 
         attributeChatUsage(options.currentAccount, totalTokens)
